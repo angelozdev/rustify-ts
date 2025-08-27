@@ -559,7 +559,7 @@ class None extends Option<never> {
     return this as any;
   }
 
-  andThen<T, U>(_fn: (data: T) => Option<U>): Option<U> {
+  andThen<U>(_fn: (data: never) => Option<U>): Option<U> {
     return this as any;
   }
 

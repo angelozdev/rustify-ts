@@ -16,7 +16,7 @@ abstract class Result<T, E> {
   abstract inspectErr(fn: (error: E) => void): Result<T, E>;
   abstract tap(fn: (data: T) => void): Result<T, E>;
   abstract tapError(fn: (error: E) => void): Result<T, E>;
-  abstract andThen<U>(fn: (data: T) => Result<U, E>): Result<U, E>;
+  abstract andThen<U, F = E>(fn: (data: T) => Result<U, F>): Result<U, E | F>;
   abstract orElse<F>(fn: (error: E) => Result<T, F>): Result<T, F>;
 
   /**
@@ -837,7 +837,7 @@ class Success<T> extends Result<T, never> {
     return this as any;
   }
 
-  andThen<U>(fn: (data: T) => Result<U, never>): Result<U, never> {
+  andThen<U, F = never>(fn: (data: T) => Result<U, F>): Result<U, never | F> {
     return fn(this._data);
   }
 
@@ -913,11 +913,11 @@ class Failure<E> extends Result<never, E> {
     return this;
   }
 
-  andThen<T, U>(_fn: (data: T) => Result<U, E>): Result<U, E> {
+  andThen<U, F = E>(_fn: (data: never) => Result<U, F>): Result<U, E | F> {
     return this as any;
   }
 
-  orElse<T>(fn: (error: E) => Result<T, any>): Result<T, any> {
+  orElse<T, F>(fn: (error: E) => Result<T, F>): Result<T, F> {
     return fn(this._error);
   }
 
