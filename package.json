@@ -1,0 +1,60 @@
+{
+  "author": "Angelo Zambrano",
+  "bugs": {
+    "url": "https://github.com/yourusername/try-catch/issues"
+  },
+  "description": "A TypeScript library implementing functional programming monads Result<T,E> and Option<T>, similar to Rust's error handling patterns. Provides safe error handling without exceptions.",
+  "devDependencies": {
+    "tsup": "8.5.0",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "homepage": "https://github.com/yourusername/try-catch#readme",
+  "keywords": [
+    "result",
+    "option",
+    "monad",
+    "functional",
+    "error-handling",
+    "rust-inspired",
+    "typescript",
+    "safe",
+    "fp",
+    "maybe"
+  ],
+  "license": "ISC",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "name": "try-catch",
+  "packageManager": "pnpm@10.15.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/try-catch.git"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "echo 'No linting configured yet'",
+    "prepublishOnly": "pnpm build",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "type-check": "tsc --noEmit"
+  },
+  "types": "dist/index.d.ts",
+  "version": "1.0.0"
+}
