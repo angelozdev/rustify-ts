@@ -87,9 +87,9 @@ describe("Result - New Methods", () => {
       // Test that andThen short-circuits properly
       let executed = false;
       const result = Result.ok(10)
-        .andThen(x => Result.ok(x * 2))
-        .andThen(_x => Result.err("chain error"))
-        .andThen(_x => {
+        .andThen((x) => Result.ok(x * 2))
+        .andThen((_x) => Result.err("chain error"))
+        .andThen((_x) => {
           executed = true;
           return Result.ok(100);
         });
