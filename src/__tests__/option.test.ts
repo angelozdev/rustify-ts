@@ -86,9 +86,9 @@ describe("Option - New Methods", () => {
       // Test that andThen short-circuits properly
       let executed = false;
       const result = Option.some(10)
-        .andThen(x => Option.some(x * 2))
-        .andThen(_x => Option.none())
-        .andThen(_x => {
+        .andThen((x) => Option.some(x * 2))
+        .andThen((_x) => Option.none())
+        .andThen((_x) => {
           executed = true;
           return Option.some(100);
         });
