@@ -49,11 +49,10 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "lint": "echo 'No linting configured yet'",
+    "lint": "tsc --noEmit",
     "prepublishOnly": "pnpm build",
     "test": "vitest",
-    "test:coverage": "vitest --coverage",
-    "type-check": "tsc --noEmit"
+    "test:coverage": "vitest --coverage"
   },
   "types": "dist/index.d.ts",
   "version": "1.0.0"

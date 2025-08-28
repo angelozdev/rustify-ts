@@ -63,14 +63,14 @@ describe("Result - New Methods", () => {
     it("should be an alias for flatMap with Success", () => {
       const result = Result.ok(5);
       const chained = result.andThen((x) => Result.ok(x * 2));
-      expect(chained.isSuccess()).toBe(true);
+      expect(chained.isOk()).toBe(true);
       expect(chained.unwrap()).toBe(10);
     });
 
     it("should short-circuit with Failure", () => {
       const result = Result.err("error");
       const chained = result.andThen((x: number) => Result.ok(x * 2));
-      expect(chained.isFailure()).toBe(true);
+      expect(chained.isErr()).toBe(true);
       expect(chained._getError()).toBe("error");
     });
 
@@ -79,7 +79,7 @@ describe("Result - New Methods", () => {
         .andThen((x) => Result.ok(x / 2))
         .andThen((x) => Result.ok(x + 1));
 
-      expect(result.isSuccess()).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(result.unwrap()).toBe(6);
     });
 
@@ -94,7 +94,7 @@ describe("Result - New Methods", () => {
           return Result.ok(100);
         });
 
-      expect(result.isFailure()).toBe(true);
+      expect(result.isErr()).toBe(true);
       expect(result._getError()).toBe("chain error");
       expect(executed).toBe(false); // Should not execute after error
     });
@@ -109,7 +109,7 @@ describe("Result - New Methods", () => {
         return Result.ok("recovery");
       });
 
-      expect(recovered.isSuccess()).toBe(true);
+      expect(recovered.isOk()).toBe(true);
       expect(recovered.unwrap()).toBe("original");
       expect(called).toBe(false);
     });
@@ -120,7 +120,7 @@ describe("Result - New Methods", () => {
         Result.ok(`recovered from: ${err}`)
       );
 
-      expect(recovered.isSuccess()).toBe(true);
+      expect(recovered.isOk()).toBe(true);
       expect(recovered.unwrap()).toBe("recovered from: original error");
     });
 
@@ -129,7 +129,7 @@ describe("Result - New Methods", () => {
         .orElse((_err) => Result.err("error2"))
         .orElse((err) => Result.ok(`final recovery from ${err}`));
 
-      expect(result.isSuccess()).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(result.unwrap()).toBe("final recovery from error2");
     });
 
@@ -139,7 +139,7 @@ describe("Result - New Methods", () => {
         code === 404 ? Result.ok("Not found handled") : Result.err(code)
       );
 
-      expect(recovered.isSuccess()).toBe(true);
+      expect(recovered.isOk()).toBe(true);
       expect(recovered.unwrap()).toBe("Not found handled");
     });
   });
@@ -165,7 +165,7 @@ describe("Result - New Methods", () => {
       });
 
       expect(returned).toBe(result); // Same instance
-      expect(returned.isFailure()).toBe(true);
+      expect(returned.isErr()).toBe(true);
       expect(sideEffect).toBe("");
     });
 
@@ -190,7 +190,7 @@ describe("Result - New Methods", () => {
       });
 
       expect(returned).toBe(result); // Same instance
-      expect(returned.isFailure()).toBe(true);
+      expect(returned.isErr()).toBe(true);
       expect(sideEffect).toBe("logged error: test error");
     });
 
@@ -202,7 +202,7 @@ describe("Result - New Methods", () => {
       });
 
       expect(returned).toBe(result); // Same instance
-      expect(returned.isSuccess()).toBe(true);
+      expect(returned.isOk()).toBe(true);
       expect(sideEffect).toBe("");
     });
 
@@ -213,7 +213,7 @@ describe("Result - New Methods", () => {
         .orElse((err) => Result.err(`transformed: ${err}`))
         .tapError((err) => errorLog.push(`logged again: ${err}`));
 
-      expect(result.isFailure()).toBe(true);
+      expect(result.isErr()).toBe(true);
       expect(errorLog).toEqual([
         "logged: first error",
         "logged again: transformed: first error",
