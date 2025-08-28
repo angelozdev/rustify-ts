@@ -1,10 +1,13 @@
+import { assert, isFunction } from "./internals/assertions";
+import none from "./none";
+import { None, Some } from "./option";
+
 abstract class Result<T, E> {
-  protected abstract readonly _data: T | null;
-  protected abstract readonly _error: E | null;
+  protected abstract readonly _data: T | None;
+  protected abstract readonly _error: E | None;
 
-  abstract isSuccess(): this is Success<T>;
-  abstract isFailure(): this is Failure<E>;
-
+  abstract isOk(): this is Success<T>;
+  abstract isErr(): this is Failure<E>;
   abstract map<U>(fn: (data: T) => U): Result<U, E>;
   abstract mapError<F>(fn: (error: E) => F): Result<T, F>;
   abstract flatMap<U>(fn: (data: T) => Result<U, E>): Result<U, E>;
@@ -18,6 +21,27 @@ abstract class Result<T, E> {
   abstract tapError(fn: (error: E) => void): Result<T, E>;
   abstract andThen<U, F = E>(fn: (data: T) => Result<U, F>): Result<U, E | F>;
   abstract orElse<F>(fn: (error: E) => Result<T, F>): Result<T, F>;
+  abstract andTee(fn: (data: T) => void): Result<T, E>;
+  abstract orTee(fn: (error: E) => void): Result<T, E>;
+  abstract andThrough<U>(fn: (data: T) => U): Result<T, E>;
+  abstract asyncAndThen<U, F = E>(
+    fn: (data: T) => Promise<Result<U, F>>
+  ): Promise<Result<U, E | F>>;
+  abstract asyncMap<U>(fn: (data: T) => Promise<U>): Promise<Result<U, E>>;
+  abstract asyncAndThrough<U>(
+    fn: (data: T) => Promise<U>
+  ): Promise<Result<T, E>>;
+  abstract asyncMapToOption<U>(fn: (data: T) => Promise<U>): Promise<any>;
+
+  /**
+   * Safely unwraps the Result value, returning None if it's an error.
+   * This is a safe alternative to unwrap() that doesn't throw.
+   *
+   * @returns The success value or None if error
+   */
+  safeUnwrap(): T | None {
+    return this.isOk() ? this.unwrap() : none();
+  }
 
   /**
    * Internal method to get error value - should only be used by static methods
@@ -29,17 +53,22 @@ abstract class Result<T, E> {
    * Pattern matches on this Result and executes the appropriate handler function.
    */
   match<U>(patterns: { ok: (data: T) => U; err: (error: E) => U }): U {
-    if (
-      !patterns ||
-      typeof patterns.ok !== "function" ||
-      typeof patterns.err !== "function"
-    ) {
-      throw new Error(
-        "Invalid pattern object: both ok and err handlers must be functions"
-      );
-    }
+    assert(
+      !!patterns,
+      "Invalid pattern object: both ok and err handlers must be functions"
+    );
 
-    if (this.isSuccess()) {
+    assert(
+      isFunction(patterns.ok),
+      "Invalid pattern object: both ok and err handlers must be functions"
+    );
+
+    assert(
+      isFunction(patterns.err),
+      "Invalid pattern object: both ok and err handlers must be functions"
+    );
+
+    if (this.isOk()) {
       return patterns.ok(this.unwrap());
     } else {
       return patterns.err(this._getError());
@@ -53,8 +82,6 @@ abstract class Result<T, E> {
   static err<E>(error: E): Failure<E> {
     return new Failure(error);
   }
-
-  // ===== ASYNC UTILITIES =====
 
   /**
    * Executes an async function and wraps the result in a Result type.
@@ -75,7 +102,7 @@ abstract class Result<T, E> {
    *   return response.json();
    * });
    *
-   * if (result.isSuccess()) {
+   * if (result.isOk()) {
    *   console.log('Users:', result.data);
    * } else {
    *   console.error('Failed to fetch users:', result.error);
@@ -83,9 +110,8 @@ abstract class Result<T, E> {
    * ```
    */
   static async tryCatch<T>(fn: () => Promise<T>): Promise<Result<T, unknown>> {
-    if (typeof fn !== "function") {
+    if (!isFunction(fn))
       return Result.err(new Error("tryCatch requires a function argument"));
-    }
 
     try {
       const data = await fn();
@@ -111,7 +137,7 @@ abstract class Result<T, E> {
    * // JSON parsing that might fail
    * const result = Result.safeTry(() => JSON.parse(jsonString));
    *
-   * if (result.isSuccess()) {
+   * if (result.isOk()) {
    *   console.log('Parsed:', result.data);
    * } else {
    *   console.error('Invalid JSON:', result.error);
@@ -119,9 +145,8 @@ abstract class Result<T, E> {
    * ```
    */
   static safeTry<T>(fn: () => T): Result<T, unknown> {
-    if (typeof fn !== "function") {
+    if (!isFunction(fn))
       return Result.err(new Error("safeTry requires a function argument"));
-    }
 
     try {
       return Result.ok(fn());
@@ -164,12 +189,13 @@ abstract class Result<T, E> {
       exponentialBase?: number;
     } = {}
   ): Promise<Result<T, { attempts: number; lastError: unknown }>> {
-    if (typeof fn !== "function") {
+    if (!isFunction(fn)) {
       return Result.err({
         attempts: 0,
         lastError: new Error("retry requires a function argument"),
       });
     }
+
     const {
       maxAttempts = 3,
       baseDelay = 100,
@@ -245,7 +271,7 @@ abstract class Result<T, E> {
     timeoutMs: number,
     timeoutError: string = "Operation timed out"
   ): Promise<Result<T, string>> {
-    if (!promise || typeof promise.then !== "function") {
+    if (!promise || !isFunction(promise.then)) {
       return Promise.resolve(
         Result.err("withTimeout requires a Promise argument")
       );
@@ -254,6 +280,7 @@ abstract class Result<T, E> {
     if (typeof timeoutMs !== "number" || timeoutMs <= 0) {
       return Promise.resolve(Result.err("timeoutMs must be a positive number"));
     }
+
     return Promise.race([
       promise.then(Result.ok),
       new Promise<Result<T, string>>((resolve) =>
@@ -261,8 +288,6 @@ abstract class Result<T, E> {
       ),
     ]);
   }
-
-  // ===== ARRAY UTILITIES =====
 
   /**
    * Combines multiple Results into a single Result containing all success values.
@@ -301,17 +326,81 @@ abstract class Result<T, E> {
 
     const values: unknown[] = [];
     for (const result of results) {
-      if (!result || typeof result.isFailure !== "function") {
+      if (!result || typeof result.isErr !== "function") {
         return Result.err(
           new Error("all() requires an array containing only Result instances")
         );
       }
-      if (result.isFailure()) {
+      if (result.isErr()) {
         return Result.err(result._getError());
       }
       values.push(result.unwrap());
     }
     return Result.ok(values as unknown as T);
+  }
+
+  /**
+   * Creates a Result-returning function from a throwable function.\
+   * This is useful for converting existing functions that throw errors.
+   *
+   * @template T - The success type
+   * @template A - The argument types
+   * @param fn - A function that may throw
+   * @returns A function that returns a Result instead of throwing
+   *
+   * @example
+   * ```typescript
+   * const safeParseInt = Result.fromThrowable(parseInt);
+   * const result = safeParseInt('123', 10);
+   * ```
+   */
+  static fromThrowable<T, A extends any[]>(
+    fn: (...args: A) => T
+  ): (...args: A) => Result<T, unknown> {
+    return (...args: A) => Result.safeTry(() => fn(...args));
+  }
+
+  /**
+   * Alias for all() to maintain API consistency with other Result libraries.
+   */
+  static combine<T extends readonly unknown[]>(results: {
+    [K in keyof T]: Result<T[K], any>;
+  }): Result<T, any> {
+    return Result.all(results);
+  }
+
+  /**
+   * Like combine/all but collects ALL errors instead of failing fast.
+   */
+  static combineWithAllErrors<T extends readonly unknown[]>(results: {
+    [K in keyof T]: Result<T[K], any>;
+  }): Result<T, any[]> {
+    if (!Array.isArray(results)) {
+      return Result.err([
+        new Error("combineWithAllErrors() requires an array of Results"),
+      ]);
+    }
+
+    const values: unknown[] = [];
+    const errors: any[] = [];
+
+    for (const result of results) {
+      if (!result || !isFunction(result.isErr)) {
+        errors.push(
+          new Error(
+            "combineWithAllErrors() requires an array containing only Result instances"
+          )
+        );
+      } else if (result.isErr()) {
+        errors.push(result._getError());
+      } else {
+        values.push(result.unwrap());
+      }
+    }
+
+    return errors.length > 0
+      ? Result.err(errors)
+      : Result.ok(values as unknown as T);
   }
 
   /**
@@ -344,14 +433,14 @@ abstract class Result<T, E> {
 
     const values: T[] = [];
     for (const result of results) {
-      if (!result || typeof result.isFailure !== "function") {
+      if (!result || !isFunction(result.isErr)) {
         return Result.err(
           new Error(
             "collect() requires an array containing only Result instances"
           ) as unknown as E
         );
       }
-      if (result.isFailure()) {
+      if (result.isErr()) {
         return Result.err(result._getError());
       }
       values.push(result.unwrap());
@@ -394,7 +483,7 @@ abstract class Result<T, E> {
     const failures: E[] = [];
 
     for (const result of results) {
-      if (result.isSuccess()) {
+      if (result.isOk()) {
         successes.push(result.unwrap());
       } else {
         failures.push(result._getError());
@@ -434,7 +523,7 @@ abstract class Result<T, E> {
     const failures: Failure<E>[] = [];
 
     for (const result of results) {
-      if (result.isSuccess()) {
+      if (result.isOk()) {
         successes.push(result);
       } else {
         failures.push(result as Failure<E>);
@@ -548,19 +637,19 @@ abstract class Result<T, E> {
    *
    * This function takes a value that might be null or undefined and converts it
    * into a Result. If the value is not null/undefined, it returns a successful Result.
-   * If the value is null or undefined, it returns a failed Result with a descriptive error.
+   * If the value is null or undefined, it returns a failed Result with "missing_value" error.
    *
    * @template T - The type of the non-null value
    * @param value - A value that might be null or undefined
-   * @returns A Result containing either the non-null value or "null_or_undefined" error
+   * @returns A Result containing either the non-null value or "missing_value" error
    *
    * @example
    * ```typescript
    * // Working with potentially null API responses
    * const user = Result.fromNullable(apiResponse.user);
    *
-   * if (user.isSuccess()) {
-   *   console.log('User found:', user.data.name);
+   * if (user.isOk()) {
+   *   console.log('User found:', user.unwrap().name);
    * } else {
    *   console.log('No user data available');
    * }
@@ -568,8 +657,8 @@ abstract class Result<T, E> {
    */
   static fromNullable<T>(
     value: T | null | undefined
-  ): Result<T, "null_or_undefined"> {
-    return value != null ? Result.ok(value) : Result.err("null_or_undefined");
+  ): Result<T, "missing_value"> {
+    return value != null ? Result.ok(value) : Result.err("missing_value");
   }
 
   /**
@@ -591,7 +680,7 @@ abstract class Result<T, E> {
    *   fetch('/api/data').then(r => r.json())
    * );
    *
-   * if (result.isSuccess()) {
+   * if (result.isOk()) {
    *   console.log('Data:', result.data);
    * } else {
    *   console.error('Request failed:', result.error);
@@ -605,10 +694,10 @@ abstract class Result<T, E> {
   }
 
   /**
-   * Converts a Go-style error tuple into a Result.
+   * Converts a tuple with None sentinel into a Result.
    *
-   * This function takes a tuple in the format [value, null] for success or
-   * [null, error] for failure and converts it into a Result.
+   * This function takes a tuple in the format [value, None] for success or
+   * [None, error] for failure and converts it into a Result.
    *
    * @template T - The type of the success value
    * @template E - The type of the error value
@@ -617,16 +706,20 @@ abstract class Result<T, E> {
    *
    * @example
    * ```typescript
-   * // Converting Go-style tuples
-   * const successTuple: [string, null] = ['data', null];
-   * const failureTuple: [null, string] = [null, 'error'];
+   * // Converting tuples with None
+   * const successTuple: [string, None] = ['data', none()];
+   * const failureTuple: [None, string] = [none(), 'error'];
    *
    * const success = Result.fromTuple(successTuple); // Ok('data')
    * const failure = Result.fromTuple(failureTuple); // Err('error')
    * ```
    */
-  static fromTuple<T, E>(tuple: [T, null] | [null, E]): Result<T, E> {
-    return tuple[1] === null ? Result.ok(tuple[0] as T) : Result.err(tuple[1]);
+  static fromTuple<T, E>(tuple: [T, None] | [None, E]): Result<T, E> {
+    return tuple[1] instanceof Object &&
+      "isNone" in tuple[1] &&
+      tuple[1].isNone()
+      ? Result.ok(tuple[0] as T)
+      : Result.err(tuple[1] as E);
   }
 
   /**
@@ -660,17 +753,12 @@ abstract class Result<T, E> {
    * ```
    */
   static toOption<T>(result: Result<T, any>): any {
-    // Import at runtime to avoid circular imports
-    const { Some, None } = eval('require("./option")');
-
-    if (!result || typeof result.isSuccess !== "function") {
+    if (!result || typeof result.isOk !== "function") {
       return new None();
     }
 
-    return result.isSuccess() ? new Some(result.unwrap()) : new None();
+    return result.isOk() ? new Some(result.unwrap()) : new None();
   }
-
-  // ===== FUNCTIONAL UTILITIES =====
 
   /**
    * Pattern matches on a Result and executes the appropriate handler function.
@@ -706,21 +794,20 @@ abstract class Result<T, E> {
       err: (error: E) => U;
     }
   ): U {
-    if (!result || typeof result.isSuccess !== "function") {
-      throw new Error("match() requires a Result instance");
-    }
+    assert(!!result, "match() requires a Result instance");
+    assert(isFunction(result.isOk), "match() requires a Result instance");
 
-    if (
-      !patterns ||
-      typeof patterns.ok !== "function" ||
-      typeof patterns.err !== "function"
-    ) {
-      throw new Error(
-        "Invalid pattern object: both ok and err handlers must be functions"
-      );
-    }
+    assert(
+      isFunction(patterns.ok),
+      "Invalid pattern object: both ok and err handlers must be functions"
+    );
 
-    if (result.isSuccess()) {
+    assert(
+      isFunction(patterns.err),
+      "Invalid pattern object: both ok and err handlers must be functions"
+    );
+
+    if (result.isOk()) {
       return patterns.ok(result.unwrap());
     } else {
       return patterns.err(result._getError());
@@ -758,16 +845,17 @@ abstract class Result<T, E> {
     }
 
     for (let i = 0; i < fns.length; i++) {
-      if (typeof fns[i] !== "function") {
-        throw new Error(`chain() argument at index ${i} must be a function`);
-      }
+      assert(
+        isFunction(fns[i]),
+        `chain() argument at index ${i} must be a function`
+      );
     }
 
     return (initialValue: T): Result<T, E> => {
       let current: Result<T, E> = Result.ok(initialValue);
       for (const fn of fns) {
         current = current.flatMap(fn);
-        if (current.isFailure()) break;
+        if (current.isErr()) break;
       }
       return current;
     };
@@ -776,18 +864,18 @@ abstract class Result<T, E> {
 
 class Success<T> extends Result<T, never> {
   protected readonly _data: T;
-  protected readonly _error: null = null;
+  protected readonly _error: None = none();
 
   constructor(data: T) {
     super();
     this._data = data;
   }
 
-  isSuccess(): this is Success<T> {
+  isOk(): this is Success<T> {
     return true;
   }
 
-  isFailure(): this is Failure<never> {
+  isErr(): this is Failure<never> {
     return false;
   }
 
@@ -848,10 +936,51 @@ class Success<T> extends Result<T, never> {
   _getError(): never {
     throw new Error("Success has no error");
   }
+
+  andTee(fn: (data: T) => void): Result<T, never> {
+    fn(this._data);
+    return this;
+  }
+
+  orTee<E>(_fn: (error: E) => void): Result<T, E> {
+    return this as any;
+  }
+
+  andThrough<U>(fn: (data: T) => U): Result<T, never> {
+    fn(this._data);
+    return this;
+  }
+
+  async asyncAndThen<U, F = never>(
+    fn: (data: T) => Promise<Result<U, F>>
+  ): Promise<Result<U, never | F>> {
+    return await fn(this._data);
+  }
+
+  async asyncMap<U>(fn: (data: T) => Promise<U>): Promise<Result<U, never>> {
+    const result = await fn(this._data);
+    return Result.ok(result);
+  }
+
+  async asyncAndThrough<U>(
+    fn: (data: T) => Promise<U>
+  ): Promise<Result<T, never>> {
+    await fn(this._data);
+    return this;
+  }
+
+  async asyncMapToOption<U>(fn: (data: T) => Promise<U>): Promise<any> {
+    try {
+      const result = await fn(this._data);
+      return new Some(result);
+    } catch {
+      return none();
+    }
+  }
 }
 
 class Failure<E> extends Result<never, E> {
-  protected readonly _data: null = null;
+  protected readonly _data: None = none();
   protected readonly _error: E;
 
   constructor(error: E) {
@@ -859,11 +988,11 @@ class Failure<E> extends Result<never, E> {
     this._error = error;
   }
 
-  isSuccess(): this is Success<never> {
+  isOk(): this is Success<never> {
     return false;
   }
 
-  isFailure(): this is Failure<E> {
+  isErr(): this is Failure<E> {
     return true;
   }
 
@@ -923,6 +1052,39 @@ class Failure<E> extends Result<never, E> {
 
   _getError(): E {
     return this._error;
+  }
+
+  async asyncAndThen<U, F = E>(
+    _fn: (data: never) => Promise<Result<U, F>>
+  ): Promise<Result<U, E | F>> {
+    return this as any;
+  }
+
+  async asyncMap<U>(_fn: (data: never) => Promise<U>): Promise<Result<U, E>> {
+    return this as any;
+  }
+
+  andTee<T>(_fn: (data: T) => void): Result<T, E> {
+    return this as any;
+  }
+
+  orTee(fn: (error: E) => void): Result<never, E> {
+    fn(this._error);
+    return this;
+  }
+
+  andThrough<U, T>(_fn: (data: T) => U): Result<T, E> {
+    return this as any;
+  }
+
+  async asyncAndThrough<U, T>(
+    _fn: (data: T) => Promise<U>
+  ): Promise<Result<T, E>> {
+    return this as any;
+  }
+
+  async asyncMapToOption<U>(_fn: (data: never) => Promise<U>): Promise<any> {
+    return none();
   }
 }
 

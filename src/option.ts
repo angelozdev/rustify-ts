@@ -1,3 +1,6 @@
+import { assert, isFunction } from "./internals/assertions";
+import Result, { Failure, Success } from "./result";
+
 /**
  * Abstract base class for Option types, similar to Rust's Option<T>.
  *
@@ -63,11 +66,7 @@ abstract class Option<T> {
    * Pattern matches on this Option and executes the appropriate handler function.
    */
   match<U>(patterns: { some: (data: T) => U; none: () => U }): U {
-    if (
-      !patterns ||
-      typeof patterns.some !== "function" ||
-      typeof patterns.none !== "function"
-    ) {
+    if (!patterns || !isFunction(patterns.some) || !isFunction(patterns.none)) {
       throw new Error(
         "Invalid pattern object: both some and none handlers must be functions"
       );
@@ -151,15 +150,8 @@ abstract class Option<T> {
    *   .unwrapOr('Unknown');
    * ```
    */
-  static fromResult<T, E>(result: {
-    isSuccess(): boolean;
-    unwrap(): T;
-  }): Option<T> {
-    if (!result || typeof result.isSuccess !== "function") {
-      throw new Error("fromResult() requires a Result instance");
-    }
-
-    return result.isSuccess() ? Option.some(result.unwrap()) : Option.none();
+  static fromResult<T, E>(result: Result<T, E>): Option<T> {
+    return result.isOk() ? Option.some(result.unwrap()) : Option.none();
   }
 
   /**
@@ -189,13 +181,6 @@ abstract class Option<T> {
    * ```
    */
   static toResult<T, E>(option: Option<T>, error: E): any {
-    // Import at runtime to avoid circular imports
-    const { Success, Failure } = eval('require("./result")');
-
-    if (!option || typeof option.isSome !== "function") {
-      return new Failure(new Error("Invalid Option instance") as unknown as E);
-    }
-
     return option.isSome() ? new Success(option.unwrap()) : new Failure(error);
   }
 
@@ -232,19 +217,21 @@ abstract class Option<T> {
       none: () => U;
     }
   ): U {
-    if (!option || typeof option.isSome !== "function") {
-      throw new Error("match() requires an Option instance");
-    }
+    assert(!!option, "match() requires an Option instance");
+    assert(!!option.isSome, "match() requires an Option instance");
 
-    if (
-      !patterns ||
-      typeof patterns.some !== "function" ||
-      typeof patterns.none !== "function"
-    ) {
-      throw new Error(
-        "Invalid pattern object: both some and none handlers must be functions"
-      );
-    }
+    assert(
+      !!patterns,
+      "Invalid pattern object: both some and none handlers must be functions"
+    );
+    assert(
+      !!patterns.some && isFunction(patterns.some),
+      "Invalid pattern object: both some and none handlers must be functions"
+    );
+    assert(
+      !!patterns.none && isFunction(patterns.none),
+      "Invalid pattern object: both some and none handlers must be functions"
+    );
 
     if (option.isSome()) {
       return patterns.some(option.unwrap());
@@ -252,87 +239,6 @@ abstract class Option<T> {
       return patterns.none();
     }
   }
-
-  /**
-   * Creates a fluent interface for chaining operations on an Option.
-   *
-   * This function wraps an Option in a fluent interface that allows method chaining
-   * with operations like `map`, `flatMap`, `filter`, etc. This provides a more readable
-   * and functional programming style for working with Options.
-   *
-   * @template T - The type of the value in the Option
-   * @param option - The Option to wrap in a pipe interface
-   * @returns An OptionPipeInterface that allows fluent method chaining
-   *
-   * @example
-   * ```typescript
-   * // Data transformation pipeline
-   * const result = Option.pipe(findUser(123))
-   *   .map(user => user.email)
-   *   .map(email => email.toLowerCase())
-   *   .filter(email => email.includes('@'))
-   *   .option;
-   * ```
-   */
-  static pipe<T>(option: Option<T>): OptionPipeInterface<T> {
-    if (!option || typeof option.map !== "function") {
-      throw new Error("pipe() requires an Option instance");
-    }
-
-    return {
-      map: <U>(fn: (data: T) => U) => {
-        if (typeof fn !== "function") {
-          throw new Error("map() requires a function argument");
-        }
-        return Option.pipe(option.map(fn));
-      },
-      flatMap: <U>(fn: (data: T) => Option<U>) => {
-        if (typeof fn !== "function") {
-          throw new Error("flatMap() requires a function argument");
-        }
-        return Option.pipe(option.flatMap(fn));
-      },
-      filter: (predicate: (data: T) => boolean) => {
-        if (typeof predicate !== "function") {
-          throw new Error("filter() requires a function argument");
-        }
-        return Option.pipe(option.filter(predicate));
-      },
-      tap: (fn: (data: T) => void) => {
-        if (typeof fn !== "function") {
-          throw new Error("tap() requires a function argument");
-        }
-        return Option.pipe(option.inspect(fn));
-      },
-      unwrap: () => option.unwrap(),
-      unwrapOr: (defaultValue: T) => option.unwrapOr(defaultValue),
-      get option() {
-        return option;
-      },
-    };
-  }
-}
-
-/**
- * Interface for the fluent pipe API that enables method chaining on Options.
- *
- * @template T - The type of the value in the Option
- */
-interface OptionPipeInterface<T> {
-  /** Transform the Some value using the provided function */
-  map: <U>(fn: (data: T) => U) => OptionPipeInterface<U>;
-  /** Chain another Option-returning operation */
-  flatMap: <U>(fn: (data: T) => Option<U>) => OptionPipeInterface<U>;
-  /** Filter the Option based on a predicate */
-  filter: (predicate: (data: T) => boolean) => OptionPipeInterface<T>;
-  /** Perform a side effect with the Some value without changing it */
-  tap: (fn: (data: T) => void) => OptionPipeInterface<T>;
-  /** Extract the value, throwing if the Option is None */
-  unwrap: () => T;
-  /** Extract the value or return the provided default */
-  unwrapOr: (defaultValue: T) => T;
-  /** Get the underlying Option object */
-  option: Option<T>;
 }
 
 /**
@@ -513,7 +419,7 @@ class Some<T> extends Option<T> {
  * ```
  */
 class None extends Option<never> {
-  protected readonly _data: null = null;
+  protected readonly _data: never = null as never;
 
   isSome(): this is Some<never> {
     return false;
@@ -543,7 +449,7 @@ class None extends Option<never> {
     return defaultValue;
   }
 
-  expect<T>(message: string): T {
+  expect(message: string): never {
     throw new Error(message);
   }
 
