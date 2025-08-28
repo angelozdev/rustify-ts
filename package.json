@@ -1,9 +1,9 @@
 {
   "author": "Angelo Zambrano",
   "bugs": {
-    "url": "https://github.com/yourusername/try-catch/issues"
+    "url": "https://github.com/angelozdev/rustify-ts/issues"
   },
-  "description": "A TypeScript library implementing functional programming monads Result<T,E> and Option<T>, similar to Rust's error handling patterns. Provides safe error handling without exceptions.",
+  "description": "Rustify your TypeScript: Bring Rust's powerful Result<T,E> and Option<T> patterns to TypeScript for safe, functional error handling without exceptions.",
   "devDependencies": {
     "tsup": "8.5.0",
     "typescript": "5.9.2",
@@ -24,27 +24,29 @@
     "README.md",
     "LICENSE"
   ],
-  "homepage": "https://github.com/yourusername/try-catch#readme",
+  "homepage": "https://github.com/angelozdev/rustify-ts#readme",
   "keywords": [
+    "rust",
     "result",
     "option",
     "monad",
     "functional",
     "error-handling",
     "rust-inspired",
+    "rustify",
     "typescript",
     "safe",
     "fp",
     "maybe"
   ],
-  "license": "ISC",
+  "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-  "name": "try-catch",
+  "name": "rustify-ts",
   "packageManager": "pnpm@10.15.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/try-catch.git"
+    "url": "https://github.com/angelozdev/rustify-ts.git"
   },
   "scripts": {
     "build": "tsup",

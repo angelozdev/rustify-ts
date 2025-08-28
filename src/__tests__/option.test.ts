@@ -184,48 +184,6 @@ describe("Option", () => {
     });
   });
 
-  describe("tap()", () => {
-    it("should execute function with Some value and return original", () => {
-      let sideEffect = "";
-      const option = Option.some("test value");
-      const returned = option.tap((value) => {
-        sideEffect = `tapped: ${value}`;
-      });
-
-      expect(returned).toBe(option);
-      expect(returned.unwrap()).toBe("test value");
-      expect(sideEffect).toBe("tapped: test value");
-    });
-
-    it("should not execute function with None", () => {
-      let sideEffect = "";
-      const option: Option<string> = Option.none();
-      const returned = option.tap((value) => {
-        sideEffect = `should not execute: ${value}`;
-      });
-
-      expect(returned).toBe(option);
-      expect(returned.isNone()).toBe(true);
-      expect(sideEffect).toBe("");
-    });
-
-    it("should be alias for inspect", () => {
-      let inspectEffect = "";
-      let tapEffect = "";
-      const value = "test";
-
-      const option1 = Option.some(value).inspect((v) => {
-        inspectEffect = v;
-      });
-      const option2 = Option.some(value).tap((v) => {
-        tapEffect = v;
-      });
-
-      expect(inspectEffect).toBe(tapEffect);
-      expect(option1.unwrap()).toBe(option2.unwrap());
-    });
-  });
-
   describe("match()", () => {
     it("should call some handler for Some value", () => {
       const option = Option.some("hello");
@@ -493,61 +451,6 @@ describe("Option", () => {
       const obj = { key: "value" };
       const option = Option.some(obj);
       expect(option.contains(obj)).toBe(true);
-    });
-  });
-
-  describe("fold()", () => {
-    it("should apply function to Some value", () => {
-      const option = Option.some(5);
-      const fn = vi.fn((x) => x * 2);
-      const result = option.fold(0, fn);
-      expect(result).toBe(10);
-      expect(fn).toHaveBeenCalledOnce();
-    });
-
-    it("should return default value for None", () => {
-      const option: Option<number> = Option.none();
-      const fn = vi.fn((x) => x * 2);
-      const result = option.fold(42, fn);
-      expect(result).toBe(42);
-      expect(fn).not.toHaveBeenCalled();
-    });
-
-    it("should work with different types", () => {
-      const stringOption = Option.some("hello");
-      const fn = vi.fn((s) => s.length);
-      const length = stringOption.fold(0, fn);
-      expect(length).toBe(5);
-      expect(fn).toHaveBeenCalledOnce();
-
-      const noneOption: Option<string> = Option.none();
-      const fn2 = vi.fn((s) => s.length);
-      const defaultLength = noneOption.fold(0, fn2);
-      expect(defaultLength).toBe(0);
-      expect(fn2).not.toHaveBeenCalled();
-    });
-
-    it("should be equivalent to match in functionality", () => {
-      const option = Option.some(10);
-      const fn = vi.fn((x) => `value: ${x}`);
-      const foldResult = option.fold("none", fn);
-      const matchResult = option.match({
-        some: (x) => `value: ${x}`,
-        none: () => "none",
-      });
-      expect(foldResult).toBe(matchResult);
-      expect(foldResult).toBe("value: 10");
-      expect(fn).toHaveBeenCalledOnce();
-    });
-
-    it("should handle complex transformations", () => {
-      const option = Option.some([1, 2, 3, 4, 5]);
-      const fn = vi.fn((arr: number[]) =>
-        arr.filter((x) => x % 2 === 0).reduce((sum, x) => sum + x, 0)
-      );
-      const result = option.fold(0, fn);
-      expect(result).toBe(6);
-      expect(fn).toHaveBeenCalledOnce();
     });
   });
 

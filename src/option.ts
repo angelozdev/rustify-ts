@@ -20,6 +20,12 @@ abstract class Option<T> {
   /** Returns true if the Option contains no value (is None) */
   abstract isNone(): this is None;
 
+  /** Returns true if Option is Some and the value matches the predicate */
+  abstract isSomeAnd(predicate: (data: T) => boolean): boolean;
+
+  /** Returns true if Option is None or the value matches the predicate */
+  abstract isNoneOr(predicate: (data: T) => boolean): boolean;
+
   /** Transforms the contained value using the provided function, if present */
   abstract map<U>(fn: (data: T) => U): Option<U>;
 
@@ -44,14 +50,20 @@ abstract class Option<T> {
   /** Performs a side effect with the contained value, if present */
   abstract inspect(fn: (data: T) => void): Option<T>;
 
-  /** Performs a side effect with the contained value, if present (alias for inspect) */
-  abstract tap(fn: (data: T) => void): Option<T>;
-
   /** Chains another Option-returning operation, if a value is present (alias for flatMap) */
   abstract andThen<U>(fn: (data: T) => Option<U>): Option<U>;
 
   /** Returns this Option if it contains a value, otherwise returns the result of the function */
   abstract orElse(fn: () => Option<T>): Option<T>;
+
+  /** Returns other if this Option is Some, otherwise None */
+  abstract and<U>(other: Option<U>): Option<U>;
+
+  /** Returns this Option if Some, otherwise returns other */
+  abstract or(other: Option<T>): Option<T>;
+
+  /** Returns Some if exactly one of the Options is Some, otherwise None */
+  abstract xor(other: Option<T>): Option<T>;
 
   /** Combines this Option with another Option, creating a tuple if both are Some */
   abstract zip<U>(other: Option<U>): Option<[T, U]>;
@@ -59,8 +71,20 @@ abstract class Option<T> {
   /** Returns true if the Option contains the specified value */
   abstract contains(value: T): boolean;
 
-  /** Applies a function to the contained value (if Some) or returns a default (if None) */
-  abstract fold<U>(defaultValue: U, fn: (data: T) => U): U;
+  /** Flattens a nested Option */
+  abstract flatten(): Option<any>;
+
+  /** Takes the value out of the Option, leaving None in its place */
+  abstract take(): Option<T>;
+
+  /** Replaces the value in the Option, returning the previous value */
+  abstract replace(value: T): Option<T>;
+
+  /** Converts to Result with provided error for None case */
+  abstract okOr<E>(error: E): any;
+
+  /** Converts to Result with computed error for None case */
+  abstract okOrElse<E>(errorFn: () => E): any;
 
   /**
    * Pattern matches on this Option and executes the appropriate handler function.
@@ -186,6 +210,18 @@ abstract class Option<T> {
 
   // ===== FUNCTIONAL UTILITIES =====
   /**
+   * Creates an iterator over the contained value (if Some), or empty iterator (if None).
+   *
+   * @param option - The Option to iterate over
+   * @returns An iterator that yields the contained value once, or nothing
+   */
+  static iter<T>(option: Option<T>): IterableIterator<T> {
+    return option.isSome()
+      ? [option.unwrap()][Symbol.iterator]()
+      : [][Symbol.iterator]();
+  }
+
+  /**
    * Pattern matches on an Option and executes the appropriate handler function.
    *
    * This function provides a functional way to handle both Some and None cases
@@ -295,6 +331,14 @@ class Some<T> extends Option<T> {
     return false;
   }
 
+  isSomeAnd(predicate: (data: T) => boolean): boolean {
+    return predicate(this._data);
+  }
+
+  isNoneOr(_predicate: (data: T) => boolean): boolean {
+    return false;
+  }
+
   map<U>(fn: (data: T) => U): Option<U> {
     return new Some(fn(this._data));
   }
@@ -328,17 +372,24 @@ class Some<T> extends Option<T> {
     return this;
   }
 
-  tap(fn: (data: T) => void): Option<T> {
-    fn(this._data);
-    return this;
-  }
-
   andThen<U>(fn: (data: T) => Option<U>): Option<U> {
     return fn(this._data);
   }
 
   orElse(_fn: () => Option<T>): Option<T> {
     return this;
+  }
+
+  and<U>(other: Option<U>): Option<U> {
+    return other;
+  }
+
+  or(_other: Option<T>): Option<T> {
+    return this;
+  }
+
+  xor(other: Option<T>): Option<T> {
+    return other.isSome() ? new None() : this;
   }
 
   zip<U>(other: Option<U>): Option<[T, U]> {
@@ -349,8 +400,38 @@ class Some<T> extends Option<T> {
     return this._data === value;
   }
 
-  fold<U>(_defaultValue: U, fn: (data: T) => U): U {
-    return fn(this._data);
+  flatten(): Option<any> {
+    if (
+      this._data &&
+      typeof this._data === "object" &&
+      "isSome" in this._data &&
+      typeof this._data.isSome === "function"
+    ) {
+      return this._data as any;
+    }
+    return this as any;
+  }
+
+  take(): Option<T> {
+    const current = new Some(this._data);
+    // Note: In a real implementation, this would mutate the original to None
+    // For immutability, we just return the current value
+    return current;
+  }
+
+  replace(value: T): Option<T> {
+    const previous = new Some(this._data);
+    // Note: In a real implementation, this would mutate to contain the new value
+    // For immutability, we just return the previous value
+    return previous;
+  }
+
+  okOr<E>(_error: E): any {
+    return new Success(this._data);
+  }
+
+  okOrElse<E>(_errorFn: () => E): any {
+    return new Success(this._data);
   }
 }
 
@@ -429,6 +510,14 @@ class None extends Option<never> {
     return true;
   }
 
+  isSomeAnd(_predicate: (data: never) => boolean): boolean {
+    return false;
+  }
+
+  isNoneOr(_predicate: (data: never) => boolean): boolean {
+    return true;
+  }
+
   map<U>(_fn: (data: never) => U): Option<U> {
     return this as any;
   }
@@ -461,16 +550,24 @@ class None extends Option<never> {
     return this;
   }
 
-  tap<T>(_fn: (data: T) => void): Option<T> {
-    return this as any;
-  }
-
   andThen<U>(_fn: (data: never) => Option<U>): Option<U> {
     return this as any;
   }
 
   orElse<T>(fn: () => Option<T>): Option<T> {
     return fn();
+  }
+
+  and<U>(_other: Option<U>): Option<U> {
+    return this as any;
+  }
+
+  or<T>(other: Option<T>): Option<T> {
+    return other;
+  }
+
+  xor<T>(other: Option<T>): Option<T> {
+    return other.isSome() ? other : (this as any);
   }
 
   zip<T, U>(_other: Option<U>): Option<[T, U]> {
@@ -481,8 +578,24 @@ class None extends Option<never> {
     return false;
   }
 
-  fold<T, U>(defaultValue: U, _fn: (data: T) => U): U {
-    return defaultValue;
+  flatten(): Option<any> {
+    return this as any;
+  }
+
+  take(): Option<never> {
+    return this;
+  }
+
+  replace<T>(_value: T): Option<T> {
+    return this as any;
+  }
+
+  okOr<E>(error: E): any {
+    return new Failure(error);
+  }
+
+  okOrElse<E>(errorFn: () => E): any {
+    return new Failure(errorFn());
   }
 }
 

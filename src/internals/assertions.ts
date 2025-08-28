@@ -8,14 +8,14 @@ export function assert(
   if (!condition) throw new Error(message);
 }
 
-export function assertIsOk<T>(
-  result: Result<T, any>
+export function assertIsOk<T, E>(
+  result: Result<T, E>
 ): asserts result is Success<T> {
   assert(result.isOk(), "Result is an error");
 }
 
-export function assertIsErr<E>(
-  result: Result<any, E>
+export function assertIsErr<T, E>(
+  result: Result<T, E>
 ): asserts result is Failure<E> {
   assert(result.isErr(), "Result is a success");
 }
