@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import Result, { Success, Failure } from "../result";
+import Result from "../result";
 
 describe("Result - New Methods", () => {
   describe("expect()", () => {
@@ -144,11 +144,11 @@ describe("Result - New Methods", () => {
     });
   });
 
-  describe("tap()", () => {
+  describe("inspect()", () => {
     it("should execute function with Success value and return original", () => {
       let sideEffect = "";
       const result = Result.ok("test value");
-      const returned = result.tap((value) => {
+      const returned = result.inspect((value) => {
         sideEffect = `logged: ${value}`;
       });
 
@@ -160,7 +160,7 @@ describe("Result - New Methods", () => {
     it("should not execute function with Failure", () => {
       let sideEffect = "";
       const result = Result.err("error");
-      const returned = result.tap((value) => {
+      const returned = result.inspect((value) => {
         sideEffect = `should not execute: ${value}`;
       });
 
@@ -172,20 +172,20 @@ describe("Result - New Methods", () => {
     it("should be chainable", () => {
       let effects: string[] = [];
       const result = Result.ok(42)
-        .tap((x) => effects.push(`first: ${x}`))
+        .inspect((x) => effects.push(`first: ${x}`))
         .map((x) => x * 2)
-        .tap((x) => effects.push(`second: ${x}`));
+        .inspect((x) => effects.push(`second: ${x}`));
 
       expect(result.unwrap()).toBe(84);
       expect(effects).toEqual(["first: 42", "second: 84"]);
     });
   });
 
-  describe("tapError()", () => {
+  describe("inspectErr()", () => {
     it("should execute function with Failure error and return original", () => {
       let sideEffect = "";
       const result = Result.err("test error");
-      const returned = result.tapError((error) => {
+      const returned = result.inspectErr((error) => {
         sideEffect = `logged error: ${error}`;
       });
 
@@ -197,7 +197,7 @@ describe("Result - New Methods", () => {
     it("should not execute function with Success", () => {
       let sideEffect = "";
       const result = Result.ok("value");
-      const returned = result.tapError((error) => {
+      const returned = result.inspectErr((error) => {
         sideEffect = `should not execute: ${error}`;
       });
 
@@ -209,9 +209,9 @@ describe("Result - New Methods", () => {
     it("should be chainable with other operations", () => {
       let errorLog: string[] = [];
       const result = Result.err("first error")
-        .tapError((err) => errorLog.push(`logged: ${err}`))
+        .inspectErr((err) => errorLog.push(`logged: ${err}`))
         .orElse((err) => Result.err(`transformed: ${err}`))
-        .tapError((err) => errorLog.push(`logged again: ${err}`));
+        .inspectErr((err) => errorLog.push(`logged again: ${err}`));
 
       expect(result.isErr()).toBe(true);
       expect(errorLog).toEqual([

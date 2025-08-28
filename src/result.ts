@@ -8,40 +8,25 @@ abstract class Result<T, E> {
 
   abstract isOk(): this is Success<T>;
   abstract isErr(): this is Failure<E>;
+  abstract isOkAnd(predicate: (data: T) => boolean): boolean;
+  abstract isErrAnd(predicate: (error: E) => boolean): boolean;
   abstract map<U>(fn: (data: T) => U): Result<U, E>;
   abstract mapError<F>(fn: (error: E) => F): Result<T, F>;
+  abstract mapOrElse<U>(errorFn: (error: E) => U, okFn: (data: T) => U): U;
   abstract flatMap<U>(fn: (data: T) => Result<U, E>): Result<U, E>;
+  abstract and<U>(other: Result<U, E>): Result<U, E>;
+  abstract or(other: Result<T, E>): Result<T, E>;
+  abstract flatten(): Result<any, E>;
+  abstract contains(value: T): boolean;
+  abstract containsErr(error: E): boolean;
   abstract unwrap(): T;
   abstract unwrapOr(defaultValue: T): T;
   abstract expect(message: string): T;
   abstract unwrapOrElse(fn: () => T): T;
   abstract inspect(fn: (data: T) => void): Result<T, E>;
   abstract inspectErr(fn: (error: E) => void): Result<T, E>;
-  abstract tap(fn: (data: T) => void): Result<T, E>;
-  abstract tapError(fn: (error: E) => void): Result<T, E>;
   abstract andThen<U, F = E>(fn: (data: T) => Result<U, F>): Result<U, E | F>;
   abstract orElse<F>(fn: (error: E) => Result<T, F>): Result<T, F>;
-  abstract andTee(fn: (data: T) => void): Result<T, E>;
-  abstract orTee(fn: (error: E) => void): Result<T, E>;
-  abstract andThrough<U>(fn: (data: T) => U): Result<T, E>;
-  abstract asyncAndThen<U, F = E>(
-    fn: (data: T) => Promise<Result<U, F>>
-  ): Promise<Result<U, E | F>>;
-  abstract asyncMap<U>(fn: (data: T) => Promise<U>): Promise<Result<U, E>>;
-  abstract asyncAndThrough<U>(
-    fn: (data: T) => Promise<U>
-  ): Promise<Result<T, E>>;
-  abstract asyncMapToOption<U>(fn: (data: T) => Promise<U>): Promise<any>;
-
-  /**
-   * Safely unwraps the Result value, returning None if it's an error.
-   * This is a safe alternative to unwrap() that doesn't throw.
-   *
-   * @returns The success value or None if error
-   */
-  safeUnwrap(): T | None {
-    return this.isOk() ? this.unwrap() : none();
-  }
 
   /**
    * Internal method to get error value - should only be used by static methods
@@ -761,6 +746,18 @@ abstract class Result<T, E> {
   }
 
   /**
+   * Creates an iterator over the success value (if Ok), or empty iterator (if Err).
+   *
+   * @param result - The Result to iterate over
+   * @returns An iterator that yields the success value once, or nothing
+   */
+  static iter<T, E>(result: Result<T, E>): IterableIterator<T> {
+    return result.isOk()
+      ? [result.unwrap()][Symbol.iterator]()
+      : [][Symbol.iterator]();
+  }
+
+  /**
    * Pattern matches on a Result and executes the appropriate handler function.
    *
    * This function provides a functional way to handle both success and failure cases
@@ -879,6 +876,14 @@ class Success<T> extends Result<T, never> {
     return false;
   }
 
+  isOkAnd(predicate: (data: T) => boolean): boolean {
+    return predicate(this._data);
+  }
+
+  isErrAnd(_predicate: (error: never) => boolean): boolean {
+    return false;
+  }
+
   map<U>(fn: (data: T) => U): Result<U, never> {
     return new Success(fn(this._data));
   }
@@ -887,8 +892,40 @@ class Success<T> extends Result<T, never> {
     return this as any;
   }
 
+  mapOrElse<U>(_errorFn: (error: never) => U, okFn: (data: T) => U): U {
+    return okFn(this._data);
+  }
+
   flatMap<U>(fn: (data: T) => Result<U, never>): Result<U, never> {
     return fn(this._data);
+  }
+
+  and<U>(other: Result<U, never>): Result<U, never> {
+    return other;
+  }
+
+  or(_other: Result<T, never>): Result<T, never> {
+    return this;
+  }
+
+  flatten(): Result<any, never> {
+    if (
+      this._data &&
+      typeof this._data === "object" &&
+      "isOk" in this._data &&
+      typeof this._data.isOk === "function"
+    ) {
+      return this._data as any;
+    }
+    return this as any;
+  }
+
+  contains(value: T): boolean {
+    return this._data === value;
+  }
+
+  containsErr(_error: never): boolean {
+    return false;
   }
 
   unwrap(): T {
@@ -916,15 +953,6 @@ class Success<T> extends Result<T, never> {
     return this as any;
   }
 
-  tap(fn: (data: T) => void): this {
-    fn(this._data);
-    return this;
-  }
-
-  tapError<E>(_fn: (error: E) => void): Result<T, E> {
-    return this as any;
-  }
-
   andThen<U, F = never>(fn: (data: T) => Result<U, F>): Result<U, never | F> {
     return fn(this._data);
   }
@@ -935,47 +963,6 @@ class Success<T> extends Result<T, never> {
 
   _getError(): never {
     throw new Error("Success has no error");
-  }
-
-  andTee(fn: (data: T) => void): Result<T, never> {
-    fn(this._data);
-    return this;
-  }
-
-  orTee<E>(_fn: (error: E) => void): Result<T, E> {
-    return this as any;
-  }
-
-  andThrough<U>(fn: (data: T) => U): Result<T, never> {
-    fn(this._data);
-    return this;
-  }
-
-  async asyncAndThen<U, F = never>(
-    fn: (data: T) => Promise<Result<U, F>>
-  ): Promise<Result<U, never | F>> {
-    return await fn(this._data);
-  }
-
-  async asyncMap<U>(fn: (data: T) => Promise<U>): Promise<Result<U, never>> {
-    const result = await fn(this._data);
-    return Result.ok(result);
-  }
-
-  async asyncAndThrough<U>(
-    fn: (data: T) => Promise<U>
-  ): Promise<Result<T, never>> {
-    await fn(this._data);
-    return this;
-  }
-
-  async asyncMapToOption<U>(fn: (data: T) => Promise<U>): Promise<any> {
-    try {
-      const result = await fn(this._data);
-      return new Some(result);
-    } catch {
-      return none();
-    }
   }
 }
 
@@ -996,6 +983,14 @@ class Failure<E> extends Result<never, E> {
     return true;
   }
 
+  isOkAnd(_predicate: (data: never) => boolean): boolean {
+    return false;
+  }
+
+  isErrAnd(predicate: (error: E) => boolean): boolean {
+    return predicate(this._error);
+  }
+
   map<U>(_fn: (data: never) => U): Result<U, E> {
     return this as any;
   }
@@ -1004,8 +999,32 @@ class Failure<E> extends Result<never, E> {
     return new Failure(fn(this._error));
   }
 
+  mapOrElse<U>(errorFn: (error: E) => U, _okFn: (data: never) => U): U {
+    return errorFn(this._error);
+  }
+
   flatMap<U>(_fn: (data: never) => Result<U, E>): Result<U, E> {
     return this as any;
+  }
+
+  and<U>(_other: Result<U, E>): Result<U, E> {
+    return this as any;
+  }
+
+  or<T>(other: Result<T, E>): Result<T, E> {
+    return other;
+  }
+
+  flatten(): Result<any, E> {
+    return this as any;
+  }
+
+  contains(_value: never): boolean {
+    return false;
+  }
+
+  containsErr(error: E): boolean {
+    return this._error === error;
   }
 
   unwrap(): never {
@@ -1033,15 +1052,6 @@ class Failure<E> extends Result<never, E> {
     return this;
   }
 
-  tap<T>(_fn: (data: T) => void): Result<T, E> {
-    return this as any;
-  }
-
-  tapError(fn: (error: E) => void): this {
-    fn(this._error);
-    return this;
-  }
-
   andThen<U, F = E>(_fn: (data: never) => Result<U, F>): Result<U, E | F> {
     return this as any;
   }
@@ -1052,39 +1062,6 @@ class Failure<E> extends Result<never, E> {
 
   _getError(): E {
     return this._error;
-  }
-
-  async asyncAndThen<U, F = E>(
-    _fn: (data: never) => Promise<Result<U, F>>
-  ): Promise<Result<U, E | F>> {
-    return this as any;
-  }
-
-  async asyncMap<U>(_fn: (data: never) => Promise<U>): Promise<Result<U, E>> {
-    return this as any;
-  }
-
-  andTee<T>(_fn: (data: T) => void): Result<T, E> {
-    return this as any;
-  }
-
-  orTee(fn: (error: E) => void): Result<never, E> {
-    fn(this._error);
-    return this;
-  }
-
-  andThrough<U, T>(_fn: (data: T) => U): Result<T, E> {
-    return this as any;
-  }
-
-  async asyncAndThrough<U, T>(
-    _fn: (data: T) => Promise<U>
-  ): Promise<Result<T, E>> {
-    return this as any;
-  }
-
-  async asyncMapToOption<U>(_fn: (data: never) => Promise<U>): Promise<any> {
-    return none();
   }
 }
 
