@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import Result from "../result";
+import Result from "../result/result";
 
 describe("Result", () => {
   describe("isOk() and isErr()", () => {

@@ -1,5 +1,5 @@
-import Option, { None, Some } from "../option";
-import Result, { Failure, Success } from "../result";
+import Option, { None, Some } from "../option/option";
+import Result, { Failure, Success } from "../result/result";
 
 export function assert(
   condition: boolean,
