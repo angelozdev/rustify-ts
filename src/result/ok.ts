@@ -1,4 +1,4 @@
-import Result, { Success } from "./result/result";
+import Result, { Success } from "./result";
 
 /**
  * Creates a new Success Result with the given data.
