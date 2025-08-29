@@ -642,8 +642,19 @@ abstract class Result<T, E> {
    */
   static fromNullable<T>(
     value: T | null | undefined
-  ): Result<T, "missing_value"> {
-    return value != null ? Result.ok(value) : Result.err("missing_value");
+  ): Result<T, "missing_value">;
+  static fromNullable<T, E>(
+    value: T | null | undefined,
+    error: E
+  ): Result<T, E>;
+  static fromNullable<T, E>(
+    value: T | null | undefined,
+    error?: E
+  ): Result<T, E | "missing_value"> {
+    if (value != null) {
+      return Result.ok(value);
+    }
+    return Result.err(error !== undefined ? error : ("missing_value" as any));
   }
 
   /**

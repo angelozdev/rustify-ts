@@ -688,9 +688,7 @@ describe("Result", () => {
           const configs: Record<string, string> = {
             api_url: "https://api.example.com",
           };
-          return configs[key]
-            ? Result.ok(configs[key])
-            : Result.err(`Config ${key} not found`);
+          return Result.fromNullable(configs[key], `Config ${key} not found`);
         };
 
         // Using expect with Success
