@@ -537,19 +537,23 @@ describe("Option", () => {
     });
 
     describe("Option.toResult()", () => {
-      it.skip("should create Success for Some", () => {
-        // Skip this test due to circular import issues in test environment
-        // This functionality is tested indirectly through integration tests
+      it("should create Success for Some", () => {
+        const option = Option.some("value");
+        const result = Option.toResult(option, "error");
+        expect(result.isOk()).toBe(true);
+        expect(result.unwrap()).toBe("value");
       });
 
-      it.skip("should create Failure for None", () => {
-        // Skip this test due to circular import issues in test environment
-        // This functionality is tested indirectly through integration tests
+      it("should create Failure for None", () => {
+        const option = Option.none();
+        const result = Option.toResult(option, "error");
+        expect(result.isErr()).toBe(true);
+        expect(result._getError()).toBe("error");
       });
 
-      it.skip("should handle invalid Option", () => {
-        // Skip this test due to circular import issues in test environment
-        // This functionality is tested indirectly through integration tests
+      it("should handle invalid Option", () => {
+        expect(() => Option.toResult(null as any, "error")).toThrow();
+        expect(() => Option.toResult({} as any, "error")).toThrow();
       });
     });
 
@@ -598,6 +602,269 @@ describe("Option", () => {
         expect(() => {
           Option.match(option, {} as any);
         }).toThrow("Invalid pattern object");
+      });
+    });
+
+    describe("isSomeAnd()", () => {
+      it("should return true when Some and predicate passes", () => {
+        const option = Option.some(10);
+        expect(option.isSomeAnd((x) => x > 5)).toBe(true);
+      });
+
+      it("should return false when Some but predicate fails", () => {
+        const option = Option.some(3);
+        expect(option.isSomeAnd((x) => x > 5)).toBe(false);
+      });
+
+      it("should return false when None", () => {
+        const option = Option.none();
+        expect(option.isSomeAnd((x) => x > 5)).toBe(false);
+      });
+
+      it("should work with complex predicates", () => {
+        const option = Option.some("hello world");
+        expect(option.isSomeAnd((s) => s.includes("world"))).toBe(true);
+        expect(option.isSomeAnd((s) => s.includes("goodbye"))).toBe(false);
+      });
+    });
+
+    describe("isNoneOr()", () => {
+      it("should return true when None", () => {
+        const option = Option.none();
+        expect(option.isNoneOr((x) => x > 5)).toBe(true);
+      });
+
+      it("should return false when Some (regardless of predicate)", () => {
+        const option = Option.some(10);
+        expect(option.isNoneOr((x) => x > 5)).toBe(false);
+      });
+
+      it("should return false when Some (even with failing predicate)", () => {
+        const option = Option.some(3);
+        expect(option.isNoneOr((x) => x > 5)).toBe(false);
+      });
+
+      it("should work with string values", () => {
+        const option = Option.some("hello");
+        expect(option.isNoneOr((s) => s.startsWith("h"))).toBe(false);
+        expect(option.isNoneOr((s) => s.startsWith("x"))).toBe(false);
+      });
+    });
+
+    describe("and()", () => {
+      it("should return other when first is Some", () => {
+        const option1 = Option.some("first");
+        const option2 = Option.some("second");
+        const combined = option1.and(option2);
+        expect(combined.isSome()).toBe(true);
+        expect(combined.unwrap()).toBe("second");
+      });
+
+      it("should return None when first is None", () => {
+        const option1 = Option.none();
+        const option2 = Option.some("second");
+        const combined = option1.and(option2);
+        expect(combined.isNone()).toBe(true);
+      });
+
+      it("should return None when both are None", () => {
+        const option1 = Option.none();
+        const option2 = Option.none();
+        const combined = option1.and(option2);
+        expect(combined.isNone()).toBe(true);
+      });
+    });
+
+    describe("or()", () => {
+      it("should return first when first is Some", () => {
+        const option1 = Option.some("first");
+        const option2 = Option.some("second");
+        const combined = option1.or(option2);
+        expect(combined.isSome()).toBe(true);
+        expect(combined.unwrap()).toBe("first");
+      });
+
+      it("should return second when first is None", () => {
+        const option1 = Option.none();
+        const option2 = Option.some("second");
+        const combined = option1.or(option2);
+        expect(combined.isSome()).toBe(true);
+        expect(combined.unwrap()).toBe("second");
+      });
+
+      it("should return None when both are None", () => {
+        const option1 = Option.none();
+        const option2 = Option.none();
+        const combined = option1.or(option2);
+        expect(combined.isNone()).toBe(true);
+      });
+    });
+
+    describe("xor()", () => {
+      it("should return first when first is Some and second is None", () => {
+        const option1 = Option.some("first");
+        const option2 = Option.none();
+        const result = option1.xor(option2);
+        expect(result.isSome()).toBe(true);
+        expect(result.unwrap()).toBe("first");
+      });
+
+      it("should return second when first is None and second is Some", () => {
+        const option1 = Option.none();
+        const option2 = Option.some("second");
+        const result = option1.xor(option2);
+        expect(result.isSome()).toBe(true);
+        expect(result.unwrap()).toBe("second");
+      });
+
+      it("should return None when both are Some", () => {
+        const option1 = Option.some("first");
+        const option2 = Option.some("second");
+        const result = option1.xor(option2);
+        expect(result.isNone()).toBe(true);
+      });
+
+      it("should return None when both are None", () => {
+        const option1 = Option.none();
+        const option2 = Option.none();
+        const result = option1.xor(option2);
+        expect(result.isNone()).toBe(true);
+      });
+    });
+
+    describe("flatten()", () => {
+      it("should flatten nested Some Options", () => {
+        const inner = Option.some("inner value");
+        const outer = Option.some(inner);
+        const flattened = outer.flatten();
+        expect(flattened.isSome()).toBe(true);
+        expect(flattened.unwrap()).toBe("inner value");
+      });
+
+      it("should return None when outer is None", () => {
+        const outer = Option.none();
+        const flattened = outer.flatten();
+        expect(flattened.isNone()).toBe(true);
+      });
+
+      it("should return None when inner is None", () => {
+        const inner = Option.none();
+        const outer = Option.some(inner);
+        const flattened = outer.flatten();
+        expect(flattened.isNone()).toBe(true);
+      });
+    });
+
+    describe("take()", () => {
+      it("should return the value and leave None for Some", () => {
+        const option = Option.some("test value");
+        const taken = option.take();
+        expect(taken.isSome()).toBe(true);
+        expect(taken.unwrap()).toBe("test value");
+        // Original should now be None (in Rust, but in our implementation it stays the same)
+      });
+
+      it("should return None for None", () => {
+        const option = Option.none();
+        const taken = option.take();
+        expect(taken.isNone()).toBe(true);
+      });
+    });
+
+    describe("replace()", () => {
+      it("should replace Some value and return old value", () => {
+        const option = Option.some("old value");
+        const replaced = option.replace("new value");
+        expect(replaced.isSome()).toBe(true);
+        expect(replaced.unwrap()).toBe("old value");
+        // Original should now have new value (in Rust, but in our implementation it stays the same)
+      });
+
+      it("should return None for None", () => {
+        const option = Option.none();
+        const replaced = option.replace("new value");
+        expect(replaced.isNone()).toBe(true);
+      });
+    });
+
+    describe("okOr()", () => {
+      it("should return Success for Some", () => {
+        const option = Option.some("value");
+        const result = option.okOr("default error");
+        expect(result.isOk()).toBe(true);
+        expect(result.unwrap()).toBe("value");
+      });
+
+      it("should return Failure for None", () => {
+        const option = Option.none();
+        const result = option.okOr("default error");
+        expect(result.isErr()).toBe(true);
+        expect(result._getError()).toBe("default error");
+      });
+
+      it("should work with different error types", () => {
+        const option: Option<string> = Option.none();
+        const result = option.okOr(404);
+        expect(result.isErr()).toBe(true);
+        expect(result._getError()).toBe(404);
+      });
+    });
+
+    describe("okOrElse()", () => {
+      it("should return Success for Some without calling function", () => {
+        const option = Option.some("value");
+        const fn = vi.fn(() => "error");
+        const result = option.okOrElse(fn);
+        expect(result.isOk()).toBe(true);
+        expect(result.unwrap()).toBe("value");
+        expect(fn).not.toHaveBeenCalled();
+      });
+
+      it("should return Failure for None using function result", () => {
+        const option = Option.none();
+        const fn = vi.fn(() => "computed error");
+        const result = option.okOrElse(fn);
+        expect(result.isErr()).toBe(true);
+        expect(result._getError()).toBe("computed error");
+        expect(fn).toHaveBeenCalledOnce();
+      });
+
+      it("should allow dynamic error computation", () => {
+        const option = Option.none();
+        let counter = 0;
+        const fn = () => {
+          counter++;
+          return `error-${counter}`;
+        };
+        const result = option.okOrElse(fn);
+        expect(result._getError()).toBe("error-1");
+        expect(counter).toBe(1);
+      });
+    });
+
+    describe("Option.iter()", () => {
+      it("should iterate over Some value", () => {
+        const option = Option.some("value");
+        const iterator = Option.iter(option);
+        const values = Array.from(iterator);
+        expect(values).toEqual(["value"]);
+      });
+
+      it("should iterate over None with no values", () => {
+        const option = Option.none();
+        const iterator = Option.iter(option);
+        const values = Array.from(iterator);
+        expect(values).toEqual([]);
+      });
+
+      it("should work with different types", () => {
+        const numberOption = Option.some(42);
+        const numberIterator = Option.iter(numberOption);
+        expect(Array.from(numberIterator)).toEqual([42]);
+
+        const arrayOption = Option.some([1, 2, 3]);
+        const arrayIterator = Option.iter(arrayOption);
+        expect(Array.from(arrayIterator)).toEqual([[1, 2, 3]]);
       });
     });
   });
