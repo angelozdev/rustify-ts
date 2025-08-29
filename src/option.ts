@@ -204,7 +204,9 @@ abstract class Option<T> {
    * // emptyResult is Failure('No value found')
    * ```
    */
-  static toResult<T, E>(option: Option<T>, error: E): any {
+  static toResult<T, E>(option: Option<T>, error: E): Result<T, E> {
+    assert(!!option, "toResult() requires an Option instance");
+    assert(!!option.isSome, "toResult() requires an Option instance");
     return option.isSome() ? new Success(option.unwrap()) : new Failure(error);
   }
 

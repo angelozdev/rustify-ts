@@ -4,7 +4,7 @@
     "declarationMap": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["ES2015", "ES2017", "ES2020", "DOM"],
+    "lib": ["ES2015", "ES2017", "ES2020", "ES2021", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "skipLibCheck": true,
