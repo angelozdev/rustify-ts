@@ -1,5 +1,5 @@
-import { assert, isFunction } from "./internals/assertions";
-import Result, { Failure, Success } from "./result";
+import { assert, isFunction } from "../internals/assertions";
+import Result, { Failure, Success } from "../result/result";
 
 /**
  * Abstract base class for Option types, similar to Rust's Option<T>.
@@ -206,7 +206,6 @@ abstract class Option<T> {
    */
   static toResult<T, E>(option: Option<T>, error: E): Result<T, E> {
     assert(!!option, "toResult() requires an Option instance");
-    assert(!!option.isSome, "toResult() requires an Option instance");
     return option.isSome() ? new Success(option.unwrap()) : new Failure(error);
   }
 

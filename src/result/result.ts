@@ -1,6 +1,6 @@
-import { assert, isFunction } from "./internals/assertions";
-import none from "./none";
-import { None, Some } from "./option";
+import { assert, isFunction } from "../internals/assertions";
+import none from "../option/none";
+import { None, Some } from "../option/option";
 
 abstract class Result<T, E> {
   protected abstract readonly _data: T | None;

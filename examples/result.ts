@@ -1,8 +1,6 @@
-import err from "../src/err";
-import ok from "../src/ok";
-import Result from "../src/result";
-import none from "../src/none";
-import { None } from "../src/option";
+import { err, ok, Result, None } from "../src";
+
+import none from "../src/option/none";
 
 enum UserError {
   NotFound = "User not found",
