@@ -1,6 +1,6 @@
 import { err, ok, Result, None } from "../src";
 
-import none from "../src/option/none";
+import none from "../src/core/option/none";
 
 enum UserError {
   NotFound = "User not found",

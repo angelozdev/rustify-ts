@@ -1,4 +1,4 @@
-import { assert, isFunction } from "../internals/assertions";
+import { assert, isFunction } from "../../internals/assertions";
 import none from "../option/none";
 import { None, Some } from "../option/option";
 
