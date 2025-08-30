@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import Option from "../option/option";
+import Option from "../option";
 
-import err from "../result/err";
-import { ok } from "../result";
+import err from "../../result/err";
+import { ok } from "../../result";
 
 describe("Option", () => {
   describe("isSome() and isNone()", () => {

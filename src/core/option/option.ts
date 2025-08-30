@@ -1,4 +1,4 @@
-import { assert, isFunction } from "../internals/assertions";
+import { assert, isFunction } from "../../internals/assertions";
 import Result, { Failure, Success } from "../result/result";
 
 /**
