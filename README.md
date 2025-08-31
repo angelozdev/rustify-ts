@@ -70,17 +70,25 @@ import { ok, err, Result } from "rustify-ts";
 const success = ok("Data loaded successfully");
 const failure = err("Network timeout");
 
-// Transform error-prone code into bulletproof operations
+// Safe async operations - no more unhandled promise rejections!
 const apiResult = await Result.tryCatch(async () => {
   const response = await fetch("/api/critical-data");
-  if (!response.ok) return err(`HTTP ${response.status}`);
-  return ok(await response.json());
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return await response.json();
 });
 
-// Handle success and failure with confidence
-const outcome = apiResult.match({
-  ok: (data) => processSuccess(data),
-  err: (error) => handleGracefully(error),
+// Chain operations safely - stop at first error
+const processedData = apiResult
+  .map((data) => data.items) // Transform success value
+  .flatMap((items) => validateItems(items)) // Chain another Result operation
+  .map((items) => items.slice(0, 10)); // Transform again
+
+// Handle success and failure with pattern matching
+const outcome = processedData.match({
+  ok: (data) => ({ success: true, data }),
+  err: (error) => ({ success: false, error: error.message }),
 });
 ```
 
@@ -93,21 +101,20 @@ import { some, none, Option } from "rustify-ts";
 const user = some({ name: "John", age: 30 });
 const empty = none();
 
-// Say goodbye to null/undefined crashes
-const greeting = Option.fromNullable(getCurrentUser())
-  .map((user) => user.profile)
-  .map((profile) => profile.displayName)
-  .unwrapOr("Anonymous User");
+// Convert nullable values safely
+const currentUser = Option.fromNullable(getCurrentUser());
 
-// Chain operations without fear using some/none
-const processUser = (userData: any) => {
-  if (!userData?.isValid) return none();
-  return some(`Welcome, ${userData.name}!`);
-};
+// Chain transformations without null checks
+const greeting = currentUser
+  .map((user) => user.profile) // Transform if present
+  .flatMap((profile) => Option.fromNullable(profile.displayName)) // Chain safely
+  .or(currentUser.map((user) => user.email)) // Fallback to email
+  .unwrapOr("Anonymous User"); // Final default
 
-const result = processUser(userData).match({
-  some: (message) => message,
-  none: () => "Please complete your profile",
+// Pattern matching for clean control flow
+const userStatus = currentUser.match({
+  some: (user) => `Welcome back, ${user.name}!`,
+  none: () => "Please log in to continue",
 });
 ```
 
@@ -143,65 +150,357 @@ _\*Including exception stack trace generation_
 
 ### 🎯 **Result<T, E>** - Mission-Critical Error Handling
 
-#### Static Constructors
+#### ⚡ **Core Constructors**
 
 ```typescript
 // Rust-style constructors (recommended)
-ok<T>(value: T)                           // Create success - Rust style
-err<E>(error: E)                          // Create failure - Rust style
+import { ok, err } from "rustify-ts";
 
-// Alternative class methods
-Result.ok<T>(value: T)                    // Create success
-Result.err<E>(error: E)                   // Create failure
-Result.tryCatch<T>(fn: () => Promise<T>)  // Safe async execution
-Result.retry<T>(fn, options)              // Exponential backoff retry
-Result.withTimeout<T>(promise, ms)        // Promise racing with timeout
+const success = ok("Operation completed");         // Create success
+const failure = err("Something went wrong");       // Create failure
+
+// Class-based constructors
+Result.ok<T>(value: T)                            // Create success
+Result.err<E>(error: E)                           // Create failure
 ```
 
-#### Enterprise Operations
+#### 🛡️ **Safe Execution**
 
 ```typescript
-Result.all<T>(results: Result<T, E>[])         // Parallel processing
-Result.allSettled<T, E>(results)               // Fault-tolerant batch processing
-Result.race<T, E>(results)                     // First-to-complete wins
-Result.partition<T, E>(results)                // Split successes/failures
+// Async operations with automatic error catching
+const apiResult = await Result.tryCatch(async () => {
+  const response = await fetch("/api/data");
+  return response.json();
+});
+
+// Sync operations with automatic error catching
+const parsed = Result.safeTry(() => JSON.parse(jsonString));
+
+// Convert nullable values
+const user = Result.fromNullable(getUserById(123), "User not found");
 ```
 
-#### Advanced Transformations
+#### 🔄 **Transformations**
 
 ```typescript
-.map<U>(fn: (T) => U)                     // Transform success value
-.mapError<F>(fn: (E) => F)                // Transform error value
-.flatMap<U>(fn: (T) => Result<U, E>)      // Monadic chaining
-.recover<F>(fn: (E) => Result<T, F>)      // Error recovery
-.inspect(fn: (T) => void)                 // Side effects on success
-.inspectErr(fn: (E) => void)              // Side effects on error
+// Transform success values
+result.map((data) => data.toUpperCase()); // Result<string, E>
+
+// Transform error values
+result.mapError((err) => `Failed: ${err}`); // Result<T, string>
+
+// Chain operations that can fail
+result.flatMap((data) => validateData(data)); // Monadic chaining
+result.andThen((data) => processData(data)); // Alias for flatMap
+
+// Pattern matching (most important!)
+const outcome = result.match({
+  ok: (data) => `Success: ${data}`,
+  err: (error) => `Error: ${error}`,
+});
+```
+
+#### 📊 **State Checking & Extraction**
+
+```typescript
+// Check state
+if (result.isOk()) {
+  console.log("Success!");
+} else if (result.isErr()) {
+  console.log("Failed!");
+}
+
+// Extract values
+const value = result.unwrap(); // Throws if error
+const safeValue = result.unwrapOr("default"); // Returns default if error
+const errorValue = result.unwrapErr(); // Get error (only for failures)
+```
+
+#### 🚀 **Advanced Operations**
+
+```typescript
+// Combine multiple Results (fail-fast)
+const combined = Result.all([result1, result2, result3]);
+
+// Retry operations with exponential backoff
+const retriedResult = await Result.retry(() => unstableApiCall(), {
+  maxAttempts: 3,
+  baseDelay: 100,
+});
+
+// Add timeout to promises
+const timedResult = await Result.withTimeout(
+  slowApiCall(),
+  5000 // 5 second timeout
+);
+
+// Collect all errors instead of failing fast
+const allResults = Result.combineWithAllErrors([result1, result2, result3]);
 ```
 
 ### 🎯 **Option<T>** - Elegant Null Safety
 
-#### Smart Constructors
+#### ⚡ **Core Constructors**
 
 ```typescript
 // Rust-style constructors (recommended)
-some<T>(value: T)                         // Wrap non-null value - Rust style
-none<T>()                                 // Represent absence - Rust style
+import { some, none } from "rustify-ts";
 
-// Alternative class methods
-Option.some<T>(value: T)                  // Wrap non-null value
-Option.none<T>()                          // Represent absence
-Option.fromNullable<T>(value: T | null)   // Smart null conversion
-Option.fromPredicate<T>(value, predicate) // Conditional wrapping
+const user = some({ name: "John", age: 30 });     // Wrap value
+const empty = none();                              // Represent absence
+
+// Class-based constructors
+Option.some<T>(value: T)                          // Wrap non-null value
+Option.none<T>()                                  // Represent absence
 ```
 
-#### Powerful Combinators
+#### 🛡️ **Smart Conversions**
 
 ```typescript
-.map<U>(fn: (T) => U)                     // Transform wrapped value
-.flatMap<U>(fn: (T) => Option<U>)         // Monadic chaining
-.filter(predicate: (T) => boolean)        // Conditional filtering
-.zip<U>(other: Option<U>)                 // Combine two options
-.or(alternative: Option<T>)               // Fallback chaining
+// Convert nullable values safely
+const maybeUser = Option.fromNullable(getUserById(123));
+
+// Convert from Result (discards error info)
+const optionFromResult = Option.fromResult(someResult);
+
+// Convert to Result with custom error
+const resultFromOption = Option.toResult(maybeUser, "User not found");
+```
+
+#### 🔄 **Transformations**
+
+```typescript
+// Transform contained values
+option.map((user) => user.name); // Option<string>
+
+// Chain operations that might fail
+option.flatMap((user) => findUserProfile(user)); // Monadic chaining
+option.andThen((user) => validateUser(user)); // Alias for flatMap
+
+// Filter values conditionally
+option.filter((user) => user.isActive); // Keep only if predicate passes
+
+// Pattern matching (most important!)
+const greeting = option.match({
+  some: (user) => `Hello, ${user.name}!`,
+  none: () => "Hello, stranger!",
+});
+```
+
+#### 📊 **State Checking & Extraction**
+
+```typescript
+// Check state
+if (option.isSome()) {
+  console.log("Has value!");
+} else if (option.isNone()) {
+  console.log("No value!");
+}
+
+// Extract values
+const value = option.unwrap(); // Throws if None
+const safeValue = option.unwrapOr("default"); // Returns default if None
+const computedValue = option.unwrapOrElse(() => computeDefault());
+```
+
+#### 🔗 **Combinators**
+
+```typescript
+// Fallback chaining
+const finalOption = option1.or(option2).or(option3);
+
+// Combine with another Option
+const both = option1.and(option2); // None if either is None
+
+// Combine into tuple
+const tuple = option1.zip(option2); // Option<[T, U]>
+
+// Exclusive or
+const exclusive = option1.xor(option2); // Some only if exactly one is Some
+```
+
+---
+
+## 🎨 **Common Patterns**
+
+### 🔄 **Converting from try/catch**
+
+```typescript
+// ❌ Old way - prone to unhandled errors
+async function fetchUser(id: string) {
+  try {
+    const response = await fetch(`/api/users/${id}`);
+    const user = await response.json();
+    return user;
+  } catch (error) {
+    console.error("Failed to fetch user:", error);
+    throw error; // Error bubbles up unexpectedly
+  }
+}
+
+// ✅ New way - explicit error handling
+async function fetchUser(id: string): Promise<Result<User, string>> {
+  return await Result.tryCatch(async () => {
+    const response = await fetch(`/api/users/${id}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
+  });
+}
+
+// Usage - errors are handled explicitly
+const userResult = await fetchUser("123");
+const message = userResult.match({
+  ok: (user) => `Welcome ${user.name}!`,
+  err: (error) => `Failed to load user: ${error}`,
+});
+```
+
+### 🔗 **Chaining Operations**
+
+```typescript
+// Chain multiple operations that can fail
+const processUserData = (rawData: string) => {
+  return Result.safeTry(() => JSON.parse(rawData)) // Parse JSON
+    .flatMap((data) => validateUserSchema(data)) // Validate schema
+    .flatMap((user) => enrichWithProfile(user)) // Add profile data
+    .flatMap((user) => saveToDatabase(user)) // Save to DB
+    .map((user) => ({ success: true, userId: user.id })); // Transform result
+};
+
+// Single error handling for entire chain
+const result = processUserData(jsonString);
+if (result.isErr()) {
+  console.error("Processing failed:", result.unwrapErr());
+}
+```
+
+### 🛡️ **Null Safety with Options**
+
+```typescript
+// ❌ Old way - null checks everywhere
+function getUserDisplayName(userId?: string): string {
+  if (!userId) return "Guest";
+
+  const user = findUserById(userId);
+  if (!user) return "Unknown User";
+
+  if (!user.profile) return user.email || "No Email";
+
+  return user.profile.displayName || user.profile.firstName || "Anonymous";
+}
+
+// ✅ New way - chain transformations safely
+function getUserDisplayName(userId?: string): string {
+  return Option.fromNullable(userId)
+    .flatMap((id) => Option.fromNullable(findUserById(id)))
+    .flatMap((user) =>
+      Option.fromNullable(user.profile?.displayName)
+        .or(Option.fromNullable(user.profile?.firstName))
+        .or(Option.fromNullable(user.email))
+    )
+    .unwrapOr("Guest");
+}
+```
+
+### 🚀 **Combining Results**
+
+```typescript
+// Validate multiple fields and collect all errors
+const validateRegistration = (data: RegistrationData) => {
+  const emailResult = validateEmail(data.email);
+  const passwordResult = validatePassword(data.password);
+  const ageResult = validateAge(data.age);
+
+  // Fail-fast: return first error
+  const combined = Result.all([emailResult, passwordResult, ageResult]);
+
+  // Or collect all errors for better UX
+  const allErrors = Result.combineWithAllErrors([
+    emailResult,
+    passwordResult,
+    ageResult,
+  ]);
+
+  return allErrors.match({
+    ok: (validatedData) => ({ success: true, data: validatedData }),
+    err: (errors) => ({ success: false, errors: errors }),
+  });
+};
+```
+
+### ⚡ **Async Pattern with Retries**
+
+```typescript
+// Robust API calls with retry logic
+const callExternalAPI = async (endpoint: string) => {
+  return await Result.retry(
+    async () => {
+      const response = await fetch(endpoint);
+
+      // Retry on server errors (5xx) but not client errors (4xx)
+      if (response.status >= 500) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      if (!response.ok) {
+        return err(`Client error: ${response.status}`);
+      }
+
+      return ok(await response.json());
+    },
+    {
+      maxAttempts: 3,
+      baseDelay: 1000, // Start with 1 second
+      maxDelay: 10000, // Cap at 10 seconds
+      exponentialBase: 2, // Double delay each retry
+    }
+  );
+};
+```
+
+### 🎯 **Form Validation Pipeline**
+
+```typescript
+interface UserForm {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  age: number;
+}
+
+const validateUserForm = (
+  form: UserForm
+): Result<ValidatedUser, ValidationError[]> => {
+  const validators = [
+    () => validateEmail(form.email),
+    () => validatePassword(form.password),
+    () => validatePasswordMatch(form.password, form.confirmPassword),
+    () => validateAge(form.age),
+  ];
+
+  // Collect all validation errors
+  const results = validators.map((validator) => validator());
+  return Result.combineWithAllErrors(results).map(
+    ([email, password, _, age]) => ({ email, password, age })
+  );
+};
+
+// Usage in React/Vue component
+const handleSubmit = async (formData: UserForm) => {
+  const validation = validateUserForm(formData);
+
+  validation.match({
+    ok: async (validatedData) => {
+      const result = await createUser(validatedData);
+      // Handle success...
+    },
+    err: (errors) => {
+      setFormErrors(errors); // Show all validation errors
+    },
+  });
+};
 ```
 
 ---
@@ -302,6 +601,170 @@ const fetchWithFallback = async (urls: string[]) => {
   }
 
   return err("All endpoints failed");
+};
+```
+
+---
+
+## 🔄 **Migration Guide**
+
+### 📋 **Quick Reference: Before & After**
+
+| Pattern                  | ❌ Old Way              | ✅ With rustify-ts              |
+| ------------------------ | ----------------------- | ------------------------------- | ---------- | ---------------------------- |
+| **Error Handling**       | `try/catch`             | `Result.tryCatch()`             |
+| **Null Checks**          | `if (value != null)`    | `Option.fromNullable(value)`    |
+| **Default Values**       | `value                  |                                 | "default"` | `option.unwrapOr("default")` |
+| **Chaining**             | Nested if statements    | `.flatMap().map().filter()`     |
+| **Multiple Validations** | Manual error collection | `Result.combineWithAllErrors()` |
+
+### 🚀 **Step-by-Step Migration**
+
+#### Step 1: Start with Error-Prone Functions
+
+```typescript
+// Before
+const riskyOperation = async (data: string) => {
+  try {
+    const parsed = JSON.parse(data);
+    const validated = await validateData(parsed);
+    return await saveToDatabase(validated);
+  } catch (error) {
+    // Error handling often inconsistent or missing
+    throw error;
+  }
+};
+
+// After
+const riskyOperation = async (
+  data: string
+): Promise<Result<SavedData, string>> => {
+  return await Result.safeTry(() => JSON.parse(data))
+    .flatMap((parsed) => validateData(parsed))
+    .flatMap((validated) => Result.tryCatch(() => saveToDatabase(validated)));
+};
+```
+
+#### Step 2: Replace Nullable Return Types
+
+```typescript
+// Before
+function findUser(id: string): User | null {
+  const users = getUsers();
+  return users.find((u) => u.id === id) || null;
+}
+
+const user = findUser("123");
+if (user) {
+  console.log(user.name);
+} else {
+  console.log("User not found");
+}
+
+// After
+function findUser(id: string): Option<User> {
+  const users = getUsers();
+  return Option.fromNullable(users.find((u) => u.id === id));
+}
+
+const message = findUser("123").match({
+  some: (user) => `Found: ${user.name}`,
+  none: () => "User not found",
+});
+```
+
+#### Step 3: Convert Form Validation
+
+```typescript
+// Before
+const validateForm = (form: FormData) => {
+  const errors: string[] = [];
+
+  if (!form.email || !form.email.includes("@")) {
+    errors.push("Invalid email");
+  }
+
+  if (!form.password || form.password.length < 8) {
+    errors.push("Password too short");
+  }
+
+  if (form.age < 18) {
+    errors.push("Must be 18 or older");
+  }
+
+  return errors.length > 0 ? { success: false, errors } : { success: true };
+};
+
+// After
+const validateForm = (form: FormData): Result<ValidatedForm, string[]> => {
+  const validations = [
+    validateEmail(form.email),
+    validatePassword(form.password),
+    validateAge(form.age),
+  ];
+
+  return Result.combineWithAllErrors(validations).map(
+    ([email, password, age]) => ({ email, password, age })
+  );
+};
+```
+
+### ⚡ **Progressive Adoption Strategy**
+
+#### Phase 1: New Code (Recommended Start)
+
+- Use `Result` and `Option` for all new functions
+- Focus on async operations and data validation first
+- Start with utility functions and API calls
+
+#### Phase 2: Critical Paths
+
+- Migrate error-prone legacy code
+- Convert database operations and external API calls
+- Update authentication and authorization logic
+
+#### Phase 3: Comprehensive Migration
+
+- Refactor remaining nullable types to `Option`
+- Convert all error handling to `Result`
+- Update tests to work with new patterns
+
+### 💡 **Migration Tips**
+
+#### ✅ **Do's**
+
+- Start small with utility functions
+- Use `Result.tryCatch()` to wrap existing async code
+- Leverage `Option.fromNullable()` for easy conversion
+- Use pattern matching (`match()`) for cleaner control flow
+- Collect multiple errors with `combineWithAllErrors()`
+
+#### ❌ **Don'ts**
+
+- Don't try to migrate everything at once
+- Avoid mixing old and new error handling patterns
+- Don't use `unwrap()` without considering the consequences
+- Don't ignore the TypeScript compiler warnings
+- Avoid nested `if` statements when chaining is possible
+
+#### 🔧 **Interoperability Helpers**
+
+```typescript
+// Convert legacy Promise to Result
+const legacyApiCall = async (id: string): Promise<User> => {
+  // Existing implementation that might throw
+};
+
+const safeApiCall = (id: string): Promise<Result<User, unknown>> => {
+  return Result.tryCatch(() => legacyApiCall(id));
+};
+
+// Convert Result back to Promise for legacy code
+const resultToPromise = <T, E>(result: Result<T, E>): Promise<T> => {
+  return result.match({
+    ok: (value) => Promise.resolve(value),
+    err: (error) => Promise.reject(error),
+  });
 };
 ```
 
