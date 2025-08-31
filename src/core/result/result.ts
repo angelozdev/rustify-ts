@@ -1,4 +1,14 @@
-import { assert, isFunction } from "../../internals/assertions";
+import {
+  assert,
+  isFunction,
+  isArray,
+  isNumber,
+  isPositiveNumber,
+  isInteger,
+  isNullOrUndefined,
+  isPromise,
+  isObject,
+} from "../../internals/assertions";
 import none from "../option/none";
 import { None, Some } from "../option/option";
 
@@ -23,12 +33,7 @@ abstract class Result<T, E> {
   abstract inspectErr(fn: (error: E) => void): Result<T, E>;
   abstract andThen<U, F = E>(fn: (data: T) => Result<U, F>): Result<U, E | F>;
   abstract orElse<F>(fn: (error: E) => Result<T, F>): Result<T, F>;
-
-  /**
-   * Internal method to get error value - should only be used by static methods
-   * @internal
-   */
-  abstract _getError(): E;
+  abstract unwrapErr(): E;
 
   /**
    * Pattern matches on this Result and executes the appropriate handler function.
@@ -52,7 +57,7 @@ abstract class Result<T, E> {
     if (this.isOk()) {
       return patterns.ok(this.unwrap());
     } else {
-      return patterns.err(this._getError());
+      return patterns.err((this as unknown as Failure<E>).unwrapErr());
     }
   }
 
@@ -184,7 +189,7 @@ abstract class Result<T, E> {
       exponentialBase = 2,
     } = options;
 
-    if (maxAttempts < 1 || !Number.isInteger(maxAttempts)) {
+    if (!isInteger(maxAttempts) || maxAttempts < 1) {
       return Result.err({
         attempts: 0,
         lastError: new Error("maxAttempts must be a positive integer"),
@@ -252,13 +257,13 @@ abstract class Result<T, E> {
     timeoutMs: number,
     timeoutError: string = "Operation timed out"
   ): Promise<Result<T, string>> {
-    if (!promise || !isFunction(promise.then)) {
+    if (!isPromise(promise)) {
       return Promise.resolve(
         Result.err("withTimeout requires a Promise argument")
       );
     }
 
-    if (typeof timeoutMs !== "number" || timeoutMs <= 0) {
+    if (!isPositiveNumber(timeoutMs)) {
       return Promise.resolve(Result.err("timeoutMs must be a positive number"));
     }
 
@@ -301,7 +306,7 @@ abstract class Result<T, E> {
   static all<T extends readonly unknown[]>(results: {
     [K in keyof T]: Result<T[K], any>;
   }): Result<T, any> {
-    if (!Array.isArray(results)) {
+    if (!isArray(results)) {
       return Result.err(new Error("all() requires an array of Results"));
     }
 
@@ -313,7 +318,7 @@ abstract class Result<T, E> {
         );
       }
       if (result.isErr()) {
-        return Result.err(result._getError());
+        return Result.err(result.unwrapErr());
       }
       values.push(result.unwrap());
     }
@@ -356,7 +361,7 @@ abstract class Result<T, E> {
   static combineWithAllErrors<T extends readonly unknown[]>(results: {
     [K in keyof T]: Result<T[K], any>;
   }): Result<T, any[]> {
-    if (!Array.isArray(results)) {
+    if (!isArray(results)) {
       return Result.err([
         new Error("combineWithAllErrors() requires an array of Results"),
       ]);
@@ -373,7 +378,7 @@ abstract class Result<T, E> {
           )
         );
       } else if (result.isErr()) {
-        errors.push(result._getError());
+        errors.push(result.unwrapErr());
       } else {
         values.push(result.unwrap());
       }
@@ -406,7 +411,7 @@ abstract class Result<T, E> {
    * ```
    */
   static collect<T, E>(results: Result<T, E>[]): Result<T[], E> {
-    if (!Array.isArray(results)) {
+    if (!isArray(results)) {
       return Result.err(
         new Error("collect() requires an array of Results") as unknown as E
       );
@@ -422,7 +427,7 @@ abstract class Result<T, E> {
         );
       }
       if (result.isErr()) {
-        return Result.err(result._getError());
+        return Result.err(result.unwrapErr());
       }
       values.push(result.unwrap());
     }
@@ -467,7 +472,7 @@ abstract class Result<T, E> {
       if (result.isOk()) {
         successes.push(result.unwrap());
       } else {
-        failures.push(result._getError());
+        failures.push(result.unwrapErr());
       }
     }
 
@@ -647,7 +652,7 @@ abstract class Result<T, E> {
     value: T | null | undefined,
     error?: E
   ): Result<T, E | "missing_value"> {
-    if (value != null) {
+    if (!isNullOrUndefined(value)) {
       return Result.ok(value);
     }
     return Result.err(error !== undefined ? error : ("missing_value" as any));
@@ -707,9 +712,7 @@ abstract class Result<T, E> {
    * ```
    */
   static fromTuple<T, E>(tuple: [T, None<E>] | [None<T>, E]): Result<T, E> {
-    return tuple[1] instanceof Object &&
-      "isNone" in tuple[1] &&
-      tuple[1].isNone()
+    return isObject(tuple[1]) && "isNone" in tuple[1] && tuple[1].isNone()
       ? Result.ok(tuple[0] as T)
       : Result.err(tuple[1] as E);
   }
@@ -745,7 +748,7 @@ abstract class Result<T, E> {
    * ```
    */
   static toOption<T>(result: Result<T, any>): any {
-    if (!result || typeof result.isOk !== "function") {
+    if (!result || !isFunction(result.isOk)) {
       return new None<T>();
     }
 
@@ -762,60 +765,6 @@ abstract class Result<T, E> {
     return result.isOk()
       ? [result.unwrap()][Symbol.iterator]()
       : [][Symbol.iterator]();
-  }
-
-  /**
-   * Pattern matches on a Result and executes the appropriate handler function.
-   *
-   * This function provides a functional way to handle both success and failure cases
-   * of a Result. It takes a Result and an object with two handler functions: one for
-   * the success case (`ok`) and one for the failure case (`err`). The appropriate
-   * handler is called based on the Result's state, and both handlers must return
-   * the same type.
-   *
-   * @template T - The type of the success value
-   * @template E - The type of the error value
-   * @template U - The type returned by both handler functions
-   * @param result - The Result to pattern match against
-   * @param patterns - Object with `ok` and `err` handler functions
-   * @returns The value returned by the called handler function
-   *
-   * @example
-   * ```typescript
-   * // Simple success/error handling
-   * const result = Result.ok('hello');
-   *
-   * const message = Result.match(result, {
-   *   ok: (value) => `Success: ${value}`,
-   *   err: (error) => `Failed: ${error}`
-   * });
-   * ```
-   */
-  static match<T, E, U>(
-    result: Result<T, E>,
-    patterns: {
-      ok: (data: T) => U;
-      err: (error: E) => U;
-    }
-  ): U {
-    assert(!!result, "match() requires a Result instance");
-    assert(isFunction(result.isOk), "match() requires a Result instance");
-
-    assert(
-      isFunction(patterns.ok),
-      "Invalid pattern object: both ok and err handlers must be functions"
-    );
-
-    assert(
-      isFunction(patterns.err),
-      "Invalid pattern object: both ok and err handlers must be functions"
-    );
-
-    if (result.isOk()) {
-      return patterns.ok(result.unwrap());
-    } else {
-      return patterns.err(result._getError());
-    }
   }
 
   /**
@@ -911,7 +860,6 @@ class Success<T> extends Result<T, never> {
     return this;
   }
 
-
   contains(value: T): boolean {
     return this.data === value;
   }
@@ -953,7 +901,7 @@ class Success<T> extends Result<T, never> {
     return this;
   }
 
-  _getError(): never {
+  unwrapErr(): never {
     throw new Error("Success has no error");
   }
 }
@@ -1003,7 +951,6 @@ class Failure<E> extends Result<never, E> {
     return other;
   }
 
-
   contains(_value: never): boolean {
     return false;
   }
@@ -1045,7 +992,7 @@ class Failure<E> extends Result<never, E> {
     return fn(this.error);
   }
 
-  _getError(): E {
+  unwrapErr(): E {
     return this.error;
   }
 }
