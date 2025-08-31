@@ -255,30 +255,6 @@ describe("Result", () => {
     });
   });
 
-  describe("flatten()", () => {
-    it("should flatten nested Success Results", () => {
-      const inner = Result.ok("inner value");
-      const outer = Result.ok(inner);
-      const flattened = outer.flatten();
-      expect(flattened.isOk()).toBe(true);
-      expect(flattened.unwrap()).toBe("inner value");
-    });
-
-    it("should return Failure when outer is Failure", () => {
-      const outer = Result.err("outer error");
-      const flattened = outer.flatten();
-      expect(flattened.isErr()).toBe(true);
-      expect(flattened._getError()).toBe("outer error");
-    });
-
-    it("should return inner Failure when inner is Failure", () => {
-      const inner = Result.err("inner error");
-      const outer = Result.ok(inner);
-      const flattened = outer.flatten();
-      expect(flattened.isErr()).toBe(true);
-      expect(flattened._getError()).toBe("inner error");
-    });
-  });
 
   describe("contains() and containsErr()", () => {
     it("should return true when Success contains the value", () => {

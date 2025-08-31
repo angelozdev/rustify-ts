@@ -11,19 +11,16 @@ import Result, { Failure, Success } from "../result/result";
  * @template T - The type of the value that might be present
  */
 abstract class Option<T> {
-  /** The contained data, now private */
-  protected abstract readonly _data: T | null;
-
   /** Returns true if the Option contains a value (is Some) */
   abstract isSome(): this is Some<T>;
 
   /** Returns true if the Option contains no value (is None) */
-  abstract isNone(): this is None;
+  abstract isNone(): this is None<T>;
 
   /** Returns true if Option is Some and the value matches the predicate */
   abstract isSomeAnd(predicate: (data: T) => boolean): boolean;
 
-  /** Returns true if Option is None or the value matches the predicate */
+  /** Returns true if Option is None or if Option is Some and the value matches the predicate */
   abstract isNoneOr(predicate: (data: T) => boolean): boolean;
 
   /** Transforms the contained value using the provided function, if present */
@@ -71,20 +68,11 @@ abstract class Option<T> {
   /** Returns true if the Option contains the specified value */
   abstract contains(value: T): boolean;
 
-  /** Flattens a nested Option */
-  abstract flatten(): Option<any>;
-
-  /** Takes the value out of the Option, leaving None in its place */
-  abstract take(): Option<T>;
-
-  /** Replaces the value in the Option, returning the previous value */
-  abstract replace(value: T): Option<T>;
-
   /** Converts to Result with provided error for None case */
-  abstract okOr<E>(error: E): any;
+  abstract okOr<E>(error: E): Result<T, E>;
 
   /** Converts to Result with computed error for None case */
-  abstract okOrElse<E>(errorFn: () => E): any;
+  abstract okOrElse<E>(errorFn: () => E): Result<T, E>;
 
   /**
    * Pattern matches on this Option and executes the appropriate handler function.
@@ -119,7 +107,7 @@ abstract class Option<T> {
    *
    * @returns A None Option
    */
-  static none(): None {
+  static none<T>(): None<T> {
     return new None();
   }
 
@@ -312,69 +300,71 @@ abstract class Option<T> {
  */
 class Some<T> extends Option<T> {
   /** The contained value, now private */
-  protected readonly _data: T;
 
   /**
    * Creates a new Some instance containing the provided value.
    *
    * @param data - The value to contain
    */
-  constructor(data: T) {
+  constructor(private readonly data: T) {
     super();
-    this._data = data;
+
+    if (data === null || data === undefined) {
+      throw new Error("Some() requires a value");
+    }
   }
 
   isSome(): this is Some<T> {
     return true;
   }
 
-  isNone(): this is None {
+  isNone(): this is None<T> {
     return false;
   }
 
   isSomeAnd(predicate: (data: T) => boolean): boolean {
-    return predicate(this._data);
+    return predicate(this.data);
   }
 
-  isNoneOr(_predicate: (data: T) => boolean): boolean {
-    return false;
+  isNoneOr(predicate: (data: T) => boolean): boolean {
+    return predicate(this.data);
   }
 
   map<U>(fn: (data: T) => U): Option<U> {
-    return new Some(fn(this._data));
+    return new Some(fn(this.data));
   }
 
   flatMap<U>(fn: (data: T) => Option<U>): Option<U> {
-    return fn(this._data);
+    return fn(this.data);
   }
 
   filter(predicate: (data: T) => boolean): Option<T> {
-    return predicate(this._data) ? this : new None();
+    return predicate(this.data) ? this : new None();
   }
 
   unwrap(): T {
-    return this._data;
+    return this.data;
   }
 
   unwrapOr(_defaultValue: T): T {
-    return this._data;
+    return this.data;
   }
 
   expect(_message: string): T {
-    return this._data;
+    return this.data;
   }
 
   unwrapOrElse(_fn: () => T): T {
-    return this._data;
+    return this.data;
   }
 
   inspect(fn: (data: T) => void): Option<T> {
-    fn(this._data);
+    fn(this.data);
     return this;
   }
 
   andThen<U>(fn: (data: T) => Option<U>): Option<U> {
-    return fn(this._data);
+    return fn(this.data);
   }
 
   orElse(_fn: () => Option<T>): Option<T> {
@@ -394,45 +384,19 @@ class Some<T> extends Option<T> {
   }
 
   zip<U>(other: Option<U>): Option<[T, U]> {
-    return other.isSome() ? new Some([this._data, other.unwrap()]) : new None();
+    return other.isSome() ? new Some([this.data, other.unwrap()]) : new None();
   }
 
   contains(value: T): boolean {
-    return this._data === value;
+    return this.data === value;
   }
 
-  flatten(): Option<any> {
-    if (
-      this._data &&
-      typeof this._data === "object" &&
-      "isSome" in this._data &&
-      typeof this._data.isSome === "function"
-    ) {
-      return this._data as any;
-    }
-    return this as any;
+  okOr<E>(_error: E): Result<T, E> {
+    return new Success(this.data);
   }
 
-  take(): Option<T> {
-    const current = new Some(this._data);
-    // Note: In a real implementation, this would mutate the original to None
-    // For immutability, we just return the current value
-    return current;
-  }
-
-  replace(value: T): Option<T> {
-    const previous = new Some(this._data);
-    // Note: In a real implementation, this would mutate to contain the new value
-    // For immutability, we just return the previous value
-    return previous;
-  }
-
-  okOr<E>(_error: E): any {
-    return new Success(this._data);
-  }
-
-  okOrElse<E>(_errorFn: () => E): any {
-    return new Success(this._data);
+  okOrElse<E>(_errorFn: () => E): Result<T, E> {
+    return new Success(this.data);
   }
 }
 
@@ -500,102 +464,88 @@ class Some<T> extends Option<T> {
  * console.log(processedData.isNone()); // true
  * ```
  */
-class None extends Option<never> {
-  protected readonly _data: never = null as never;
-
-  isSome(): this is Some<never> {
+class None<T> extends Option<T> {
+  isSome(): this is Some<T> {
     return false;
   }
 
-  isNone(): this is None {
+  isNone(): this is None<T> {
     return true;
   }
 
-  isSomeAnd(_predicate: (data: never) => boolean): boolean {
+  isSomeAnd(_predicate: (data: T) => boolean): boolean {
     return false;
   }
 
-  isNoneOr(_predicate: (data: never) => boolean): boolean {
+  isNoneOr(_predicate: (data: T) => boolean): boolean {
     return true;
   }
 
-  map<U>(_fn: (data: never) => U): Option<U> {
-    return this as any;
+  map<U>(_fn: (data: T) => U): Option<U> {
+    return new None();
   }
 
-  flatMap<U>(_fn: (data: never) => Option<U>): Option<U> {
-    return this as any;
+  flatMap<U>(_fn: (data: T) => Option<U>): Option<U> {
+    return new None();
   }
 
-  filter(_predicate: (data: never) => boolean): Option<never> {
+  filter(_predicate: (data: T) => boolean): Option<T> {
     return this;
   }
 
-  unwrap(): never {
+  unwrap(): T {
     throw new Error("Called unwrap on None");
   }
 
-  unwrapOr<T>(defaultValue: T): T {
+  unwrapOr(defaultValue: T): T {
     return defaultValue;
   }
 
-  expect(message: string): never {
+  expect(message: string): T {
     throw new Error(message);
   }
 
-  unwrapOrElse<T>(fn: () => T): T {
+  unwrapOrElse(fn: () => T): T {
     return fn();
   }
 
-  inspect(_fn: (data: never) => void): Option<never> {
+  inspect(_fn: (data: T) => void): Option<T> {
     return this;
   }
 
-  andThen<U>(_fn: (data: never) => Option<U>): Option<U> {
-    return this as any;
+  andThen<U>(_fn: (data: T) => Option<U>): Option<U> {
+    return new None();
   }
 
-  orElse<T>(fn: () => Option<T>): Option<T> {
+  orElse(fn: () => Option<T>): Option<T> {
     return fn();
   }
 
   and<U>(_other: Option<U>): Option<U> {
-    return this as any;
+    return new None();
   }
 
-  or<T>(other: Option<T>): Option<T> {
+  or(other: Option<T>): Option<T> {
     return other;
   }
 
-  xor<T>(other: Option<T>): Option<T> {
-    return other.isSome() ? other : (this as any);
+  xor(other: Option<T>): Option<T> {
+    return other.isSome() ? other : new None();
   }
 
-  zip<T, U>(_other: Option<U>): Option<[T, U]> {
-    return this as any;
+  zip<U>(_other: Option<U>): Option<[T, U]> {
+    return new None();
   }
 
-  contains<T>(_value: T): boolean {
+  contains(_value: T): boolean {
     return false;
   }
 
-  flatten(): Option<any> {
-    return this as any;
-  }
-
-  take(): Option<never> {
-    return this;
-  }
-
-  replace<T>(_value: T): Option<T> {
-    return this as any;
-  }
-
-  okOr<E>(error: E): any {
+  okOr<E>(error: E): Result<T, E> {
     return new Failure(error);
   }
 
-  okOrElse<E>(errorFn: () => E): any {
+  okOrElse<E>(errorFn: () => E): Result<T, E> {
     return new Failure(errorFn());
   }
 }

@@ -24,7 +24,7 @@ import Option, { None } from "./option";
  * console.log(result.isNone()); // true
  * ```
  */
-export function none(): None {
+export function none<T>(): None<T> {
   return Option.none();
 }
 
