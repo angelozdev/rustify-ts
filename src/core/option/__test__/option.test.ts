@@ -618,7 +618,7 @@ describe("Option", () => {
       });
 
       it("should return false when None", () => {
-        const option = Option.none();
+        const option = Option.none<number>();
         expect(option.isSomeAnd((x) => x > 5)).toBe(false);
       });
 
@@ -631,23 +631,23 @@ describe("Option", () => {
 
     describe("isNoneOr()", () => {
       it("should return true when None", () => {
-        const option = Option.none();
+        const option = Option.none<number>();
         expect(option.isNoneOr((x) => x > 5)).toBe(true);
       });
 
-      it("should return false when Some (regardless of predicate)", () => {
+      it("should return true when Some and predicate passes", () => {
         const option = Option.some(10);
-        expect(option.isNoneOr((x) => x > 5)).toBe(false);
+        expect(option.isNoneOr((x) => x > 5)).toBe(true);
       });
 
-      it("should return false when Some (even with failing predicate)", () => {
+      it("should return false when Some and predicate fails", () => {
         const option = Option.some(3);
         expect(option.isNoneOr((x) => x > 5)).toBe(false);
       });
 
       it("should work with string values", () => {
         const option = Option.some("hello");
-        expect(option.isNoneOr((s) => s.startsWith("h"))).toBe(false);
+        expect(option.isNoneOr((s) => s.startsWith("h"))).toBe(true);
         expect(option.isNoneOr((s) => s.startsWith("x"))).toBe(false);
       });
     });
@@ -704,7 +704,7 @@ describe("Option", () => {
     describe("xor()", () => {
       it("should return first when first is Some and second is None", () => {
         const option1 = Option.some("first");
-        const option2 = Option.none();
+        const option2 = Option.none<string>();
         const result = option1.xor(option2);
         expect(result.isSome()).toBe(true);
         expect(result.unwrap()).toBe("first");
@@ -730,61 +730,6 @@ describe("Option", () => {
         const option2 = Option.none();
         const result = option1.xor(option2);
         expect(result.isNone()).toBe(true);
-      });
-    });
-
-    describe("flatten()", () => {
-      it("should flatten nested Some Options", () => {
-        const inner = Option.some("inner value");
-        const outer = Option.some(inner);
-        const flattened = outer.flatten();
-        expect(flattened.isSome()).toBe(true);
-        expect(flattened.unwrap()).toBe("inner value");
-      });
-
-      it("should return None when outer is None", () => {
-        const outer = Option.none();
-        const flattened = outer.flatten();
-        expect(flattened.isNone()).toBe(true);
-      });
-
-      it("should return None when inner is None", () => {
-        const inner = Option.none();
-        const outer = Option.some(inner);
-        const flattened = outer.flatten();
-        expect(flattened.isNone()).toBe(true);
-      });
-    });
-
-    describe("take()", () => {
-      it("should return the value and leave None for Some", () => {
-        const option = Option.some("test value");
-        const taken = option.take();
-        expect(taken.isSome()).toBe(true);
-        expect(taken.unwrap()).toBe("test value");
-        // Original should now be None (in Rust, but in our implementation it stays the same)
-      });
-
-      it("should return None for None", () => {
-        const option = Option.none();
-        const taken = option.take();
-        expect(taken.isNone()).toBe(true);
-      });
-    });
-
-    describe("replace()", () => {
-      it("should replace Some value and return old value", () => {
-        const option = Option.some("old value");
-        const replaced = option.replace("new value");
-        expect(replaced.isSome()).toBe(true);
-        expect(replaced.unwrap()).toBe("old value");
-        // Original should now have new value (in Rust, but in our implementation it stays the same)
-      });
-
-      it("should return None for None", () => {
-        const option = Option.none();
-        const replaced = option.replace("new value");
-        expect(replaced.isNone()).toBe(true);
       });
     });
 

@@ -3,9 +3,6 @@ import none from "../option/none";
 import { None, Some } from "../option/option";
 
 abstract class Result<T, E> {
-  protected abstract readonly _data: T | None;
-  protected abstract readonly _error: E | None;
-
   abstract isOk(): this is Success<T>;
   abstract isErr(): this is Failure<E>;
   abstract isOkAnd(predicate: (data: T) => boolean): boolean;
@@ -16,7 +13,6 @@ abstract class Result<T, E> {
   abstract flatMap<U>(fn: (data: T) => Result<U, E>): Result<U, E>;
   abstract and<U>(other: Result<U, E>): Result<U, E>;
   abstract or(other: Result<T, E>): Result<T, E>;
-  abstract flatten(): Result<any, E>;
   abstract contains(value: T): boolean;
   abstract containsErr(error: E): boolean;
   abstract unwrap(): T;
@@ -710,7 +706,7 @@ abstract class Result<T, E> {
    * const failure = Result.fromTuple(failureTuple); // Err('error')
    * ```
    */
-  static fromTuple<T, E>(tuple: [T, None] | [None, E]): Result<T, E> {
+  static fromTuple<T, E>(tuple: [T, None<E>] | [None<T>, E]): Result<T, E> {
     return tuple[1] instanceof Object &&
       "isNone" in tuple[1] &&
       tuple[1].isNone()
@@ -750,10 +746,10 @@ abstract class Result<T, E> {
    */
   static toOption<T>(result: Result<T, any>): any {
     if (!result || typeof result.isOk !== "function") {
-      return new None();
+      return new None<T>();
     }
 
-    return result.isOk() ? new Some(result.unwrap()) : new None();
+    return result.isOk() ? new Some(result.unwrap()) : new None<T>();
   }
 
   /**
@@ -871,12 +867,8 @@ abstract class Result<T, E> {
 }
 
 class Success<T> extends Result<T, never> {
-  protected readonly _data: T;
-  protected readonly _error: None = none();
-
-  constructor(data: T) {
+  constructor(private readonly data: T) {
     super();
-    this._data = data;
   }
 
   isOk(): this is Success<T> {
@@ -888,7 +880,7 @@ class Success<T> extends Result<T, never> {
   }
 
   isOkAnd(predicate: (data: T) => boolean): boolean {
-    return predicate(this._data);
+    return predicate(this.data);
   }
 
   isErrAnd(_predicate: (error: never) => boolean): boolean {
@@ -896,7 +888,7 @@ class Success<T> extends Result<T, never> {
   }
 
   map<U>(fn: (data: T) => U): Result<U, never> {
-    return new Success(fn(this._data));
+    return new Success(fn(this.data));
   }
 
   mapError<F>(_fn: (error: never) => F): Result<T, F> {
@@ -904,11 +896,11 @@ class Success<T> extends Result<T, never> {
   }
 
   mapOrElse<U>(_errorFn: (error: never) => U, okFn: (data: T) => U): U {
-    return okFn(this._data);
+    return okFn(this.data);
   }
 
   flatMap<U>(fn: (data: T) => Result<U, never>): Result<U, never> {
-    return fn(this._data);
+    return fn(this.data);
   }
 
   and<U>(other: Result<U, never>): Result<U, never> {
@@ -919,20 +911,9 @@ class Success<T> extends Result<T, never> {
     return this;
   }
 
-  flatten(): Result<any, never> {
-    if (
-      this._data &&
-      typeof this._data === "object" &&
-      "isOk" in this._data &&
-      typeof this._data.isOk === "function"
-    ) {
-      return this._data as any;
-    }
-    return this as any;
-  }
 
   contains(value: T): boolean {
-    return this._data === value;
+    return this.data === value;
   }
 
   containsErr(_error: never): boolean {
@@ -940,36 +921,36 @@ class Success<T> extends Result<T, never> {
   }
 
   unwrap(): T {
-    return this._data;
+    return this.data;
   }
 
   unwrapOr(_defaultValue: T): T {
-    return this._data;
+    return this.data;
   }
 
   expect(_message: string): T {
-    return this._data;
+    return this.data;
   }
 
   unwrapOrElse(_fn: () => T): T {
-    return this._data;
+    return this.data;
   }
 
   inspect(fn: (data: T) => void): this {
-    fn(this._data);
+    fn(this.data);
     return this;
   }
 
   inspectErr<E>(_fn: (error: E) => void): Result<T, E> {
-    return this as any;
+    return this;
   }
 
   andThen<U, F = never>(fn: (data: T) => Result<U, F>): Result<U, never | F> {
-    return fn(this._data);
+    return fn(this.data);
   }
 
   orElse<F>(_fn: (error: never) => Result<T, F>): Result<T, F> {
-    return this as any;
+    return this;
   }
 
   _getError(): never {
@@ -978,12 +959,8 @@ class Success<T> extends Result<T, never> {
 }
 
 class Failure<E> extends Result<never, E> {
-  protected readonly _data: None = none();
-  protected readonly _error: E;
-
-  constructor(error: E) {
+  constructor(private readonly error: E) {
     super();
-    this._error = error;
   }
 
   isOk(): this is Success<never> {
@@ -999,47 +976,44 @@ class Failure<E> extends Result<never, E> {
   }
 
   isErrAnd(predicate: (error: E) => boolean): boolean {
-    return predicate(this._error);
+    return predicate(this.error);
   }
 
   map<U>(_fn: (data: never) => U): Result<U, E> {
-    return this as any;
+    return this;
   }
 
   mapError<F>(fn: (error: E) => F): Result<never, F> {
-    return new Failure(fn(this._error));
+    return new Failure(fn(this.error));
   }
 
   mapOrElse<U>(errorFn: (error: E) => U, _okFn: (data: never) => U): U {
-    return errorFn(this._error);
+    return errorFn(this.error);
   }
 
   flatMap<U>(_fn: (data: never) => Result<U, E>): Result<U, E> {
-    return this as any;
+    return this;
   }
 
   and<U>(_other: Result<U, E>): Result<U, E> {
-    return this as any;
+    return this;
   }
 
   or<T>(other: Result<T, E>): Result<T, E> {
     return other;
   }
 
-  flatten(): Result<any, E> {
-    return this as any;
-  }
 
   contains(_value: never): boolean {
     return false;
   }
 
   containsErr(error: E): boolean {
-    return this._error === error;
+    return this.error === error;
   }
 
   unwrap(): never {
-    throw new Error(`Called unwrap on failure: ${this._error}`);
+    throw new Error(`Called unwrap on failure: ${this.error}`);
   }
 
   unwrapOr<T>(defaultValue: T): T {
@@ -1047,7 +1021,7 @@ class Failure<E> extends Result<never, E> {
   }
 
   expect<T>(message: string): T {
-    throw new Error(`${message}: ${this._error}`);
+    throw new Error(`${message}: ${this.error}`);
   }
 
   unwrapOrElse<T>(fn: () => T): T {
@@ -1059,20 +1033,20 @@ class Failure<E> extends Result<never, E> {
   }
 
   inspectErr(fn: (error: E) => void): this {
-    fn(this._error);
+    fn(this.error);
     return this;
   }
 
   andThen<U, F = E>(_fn: (data: never) => Result<U, F>): Result<U, E | F> {
-    return this as any;
+    return this;
   }
 
   orElse<T, F>(fn: (error: E) => Result<T, F>): Result<T, F> {
-    return fn(this._error);
+    return fn(this.error);
   }
 
   _getError(): E {
-    return this._error;
+    return this.error;
   }
 }
 
