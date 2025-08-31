@@ -85,7 +85,7 @@ describe("Result", () => {
       const result = Result.err("error");
       const mapped = result.map((x: number) => x * 2);
       expect(mapped.isErr()).toBe(true);
-      expect(mapped._getError()).toBe("error");
+      expect(mapped.unwrapErr()).toBe("error");
     });
 
     it("should work with type transformations", () => {
@@ -109,7 +109,7 @@ describe("Result", () => {
       const result = Result.err("network_error");
       const mapped = result.mapError((err) => `Failed: ${err}`);
       expect(mapped.isErr()).toBe(true);
-      expect(mapped._getError()).toBe("Failed: network_error");
+      expect(mapped.unwrapErr()).toBe("Failed: network_error");
     });
 
     it("should not transform Success", () => {
@@ -122,7 +122,7 @@ describe("Result", () => {
     it("should work with error type transformations", () => {
       const result = Result.err(404);
       const mapped = result.mapError((code) => `HTTP Error ${code}`);
-      expect(mapped._getError()).toBe("HTTP Error 404");
+      expect(mapped.unwrapErr()).toBe("HTTP Error 404");
     });
 
     it("should be chainable", () => {
@@ -130,7 +130,7 @@ describe("Result", () => {
       const chained = result
         .mapError((err) => `Step1: ${err}`)
         .mapError((err) => `Step2: ${err}`);
-      expect(chained._getError()).toBe("Step2: Step1: error");
+      expect(chained.unwrapErr()).toBe("Step2: Step1: error");
     });
   });
 
@@ -184,14 +184,14 @@ describe("Result", () => {
       const result = Result.err("error");
       const flatMapped = result.flatMap((x: number) => Result.ok(x * 2));
       expect(flatMapped.isErr()).toBe(true);
-      expect(flatMapped._getError()).toBe("error");
+      expect(flatMapped.unwrapErr()).toBe("error");
     });
 
     it("should return Failure when inner function returns Failure", () => {
       const result: Result<number, string> = Result.ok(5);
       const flatMapped = result.flatMap((_x) => Result.err("inner error"));
       expect(flatMapped.isErr()).toBe(true);
-      expect(flatMapped._getError()).toBe("inner error");
+      expect(flatMapped.unwrapErr()).toBe("inner error");
     });
 
     it("should be chainable", () => {
@@ -217,7 +217,7 @@ describe("Result", () => {
       const result2 = Result.ok("second");
       const combined = result1.and(result2);
       expect(combined.isErr()).toBe(true);
-      expect(combined._getError()).toBe("first error");
+      expect(combined.unwrapErr()).toBe("first error");
     });
 
     it("should return first Failure when both are Failures", () => {
@@ -225,7 +225,7 @@ describe("Result", () => {
       const result2 = Result.err("second error");
       const combined = result1.and(result2);
       expect(combined.isErr()).toBe(true);
-      expect(combined._getError()).toBe("first error");
+      expect(combined.unwrapErr()).toBe("first error");
     });
   });
 
@@ -251,7 +251,7 @@ describe("Result", () => {
       const result2 = Result.err("second error");
       const combined = result1.or(result2);
       expect(combined.isErr()).toBe(true);
-      expect(combined._getError()).toBe("second error");
+      expect(combined.unwrapErr()).toBe("second error");
     });
   });
 
@@ -333,7 +333,7 @@ describe("Result", () => {
     it("should create Failure with Result.err()", () => {
       const result = Result.err("error");
       expect(result.isErr()).toBe(true);
-      expect(result._getError()).toBe("error");
+      expect(result.unwrapErr()).toBe("error");
     });
   });
 
@@ -350,7 +350,7 @@ describe("Result", () => {
           throw new Error("async error");
         });
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBeInstanceOf(Error);
+        expect(result.unwrapErr()).toBeInstanceOf(Error);
       });
 
       it("should return Failure for invalid function", async () => {
@@ -371,7 +371,7 @@ describe("Result", () => {
           throw new Error("sync error");
         });
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBeInstanceOf(Error);
+        expect(result.unwrapErr()).toBeInstanceOf(Error);
       });
 
       it("should return Failure for invalid function", () => {
@@ -390,13 +390,13 @@ describe("Result", () => {
       it("should create Failure for null", () => {
         const result = Result.fromNullable(null);
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBe("missing_value");
+        expect(result.unwrapErr()).toBe("missing_value");
       });
 
       it("should create Failure for undefined", () => {
         const result = Result.fromNullable(undefined);
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBe("missing_value");
+        expect(result.unwrapErr()).toBe("missing_value");
       });
 
       it("should work with falsy values that are not null/undefined", () => {
@@ -481,7 +481,7 @@ describe("Result", () => {
         const result = Result.err("error");
         const chained = result.andThen((x: number) => Result.ok(x * 2));
         expect(chained.isErr()).toBe(true);
-        expect(chained._getError()).toBe("error");
+        expect(chained.unwrapErr()).toBe("error");
       });
 
       it("should work with complex chaining", () => {
@@ -504,7 +504,7 @@ describe("Result", () => {
           });
 
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBe("chain error");
+        expect(result.unwrapErr()).toBe("chain error");
         expect(executed).not.toHaveBeenCalled();
       });
     });

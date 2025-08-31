@@ -549,7 +549,7 @@ describe("Option", () => {
         const option = Option.none();
         const result = Option.toResult(option, "error");
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBe("error");
+        expect(result.unwrapErr()).toBe("error");
       });
 
       it("should handle invalid Option", () => {
@@ -558,53 +558,6 @@ describe("Option", () => {
       });
     });
 
-    describe("Option.match()", () => {
-      it("should call some handler for Some value", () => {
-        const option = Option.some("hello");
-        const someFn = vi.fn((value) => `got: ${value}`);
-        const noneFn = vi.fn(() => "got nothing");
-
-        const result = Option.match(option, {
-          some: someFn,
-          none: noneFn,
-        });
-
-        expect(result).toBe("got: hello");
-        expect(someFn).toHaveBeenCalledWith("hello");
-        expect(noneFn).not.toHaveBeenCalled();
-      });
-
-      it("should call none handler for None", () => {
-        const option = Option.none();
-        const someFn = vi.fn((value) => `got: ${value}`);
-        const noneFn = vi.fn(() => "got nothing");
-
-        const result = Option.match(option, {
-          some: someFn,
-          none: noneFn,
-        });
-
-        expect(result).toBe("got nothing");
-        expect(someFn).not.toHaveBeenCalled();
-        expect(noneFn).toHaveBeenCalled();
-      });
-
-      it("should throw error for invalid Option", () => {
-        expect(() => {
-          Option.match(null as any, {
-            some: () => "some",
-            none: () => "none",
-          });
-        }).toThrow("match() requires an Option instance");
-      });
-
-      it("should throw error for invalid patterns", () => {
-        const option = Option.some("test");
-        expect(() => {
-          Option.match(option, {} as any);
-        }).toThrow("Invalid pattern object");
-      });
-    });
 
     describe("isSomeAnd()", () => {
       it("should return true when Some and predicate passes", () => {
@@ -745,14 +698,14 @@ describe("Option", () => {
         const option = Option.none();
         const result = option.okOr("default error");
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBe("default error");
+        expect(result.unwrapErr()).toBe("default error");
       });
 
       it("should work with different error types", () => {
         const option: Option<string> = Option.none();
         const result = option.okOr(404);
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBe(404);
+        expect(result.unwrapErr()).toBe(404);
       });
     });
 
@@ -771,7 +724,7 @@ describe("Option", () => {
         const fn = vi.fn(() => "computed error");
         const result = option.okOrElse(fn);
         expect(result.isErr()).toBe(true);
-        expect(result._getError()).toBe("computed error");
+        expect(result.unwrapErr()).toBe("computed error");
         expect(fn).toHaveBeenCalledOnce();
       });
 
@@ -783,7 +736,7 @@ describe("Option", () => {
           return `error-${counter}`;
         };
         const result = option.okOrElse(fn);
-        expect(result._getError()).toBe("error-1");
+        expect(result.unwrapErr()).toBe("error-1");
         expect(counter).toBe(1);
       });
     });

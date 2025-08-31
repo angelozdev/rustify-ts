@@ -1,4 +1,8 @@
-import { assert, isFunction } from "../../internals/assertions";
+import {
+  assert,
+  isFunction,
+  isNullOrUndefined,
+} from "../../internals/assertions";
 import Result, { Failure, Success } from "../result/result";
 
 /**
@@ -108,7 +112,7 @@ abstract class Option<T> {
    * @returns A None Option
    */
   static none<T>(): None<T> {
-    return new None();
+    return new None<T>();
   }
 
   // ===== CONVERSION UTILITIES =====
@@ -136,7 +140,7 @@ abstract class Option<T> {
    * ```
    */
   static fromNullable<T>(value: T | null | undefined): Option<T> {
-    return value != null ? Option.some(value) : Option.none();
+    return !isNullOrUndefined(value) ? Option.some(value) : Option.none();
   }
 
   /**
@@ -209,61 +213,6 @@ abstract class Option<T> {
       ? [option.unwrap()][Symbol.iterator]()
       : [][Symbol.iterator]();
   }
-
-  /**
-   * Pattern matches on an Option and executes the appropriate handler function.
-   *
-   * This function provides a functional way to handle both Some and None cases
-   * of an Option. It takes an Option and an object with two handler functions: one for
-   * the Some case and one for the None case. The appropriate handler is called based
-   * on the Option's state, and both handlers must return the same type.
-   *
-   * @template T - The type of the value in the Option
-   * @template U - The type returned by both handler functions
-   * @param option - The Option to pattern match against
-   * @param patterns - Object with `some` and `none` handler functions
-   * @returns The value returned by the called handler function
-   *
-   * @example
-   * ```typescript
-   * // Simple Some/None handling
-   * const option = findUser(123);
-   *
-   * const message = Option.match(option, {
-   *   some: (user) => `Welcome back, ${user.name}!`,
-   *   none: () => 'Please log in to continue'
-   * });
-   * ```
-   */
-  static match<T, U>(
-    option: Option<T>,
-    patterns: {
-      some: (data: T) => U;
-      none: () => U;
-    }
-  ): U {
-    assert(!!option, "match() requires an Option instance");
-    assert(!!option.isSome, "match() requires an Option instance");
-
-    assert(
-      !!patterns,
-      "Invalid pattern object: both some and none handlers must be functions"
-    );
-    assert(
-      !!patterns.some && isFunction(patterns.some),
-      "Invalid pattern object: both some and none handlers must be functions"
-    );
-    assert(
-      !!patterns.none && isFunction(patterns.none),
-      "Invalid pattern object: both some and none handlers must be functions"
-    );
-
-    if (option.isSome()) {
-      return patterns.some(option.unwrap());
-    } else {
-      return patterns.none();
-    }
-  }
 }
 
 /**
@@ -309,7 +258,7 @@ class Some<T> extends Option<T> {
   constructor(private readonly data: T) {
     super();
 
-    if (data === null || data === undefined) {
+    if (isNullOrUndefined(data)) {
       throw new Error("Some() requires a value");
     }
   }
