@@ -2,15 +2,13 @@ import {
   assert,
   isFunction,
   isArray,
-  isNumber,
   isPositiveNumber,
   isInteger,
   isNullOrUndefined,
   isPromise,
   isObject,
 } from "../../internals/assertions";
-import none from "../option/none";
-import { None, Some } from "../option/option";
+import OptionType, { None, Some } from "../option/option";
 
 abstract class Result<T, E> {
   abstract isOk(): this is Success<T>;
@@ -34,6 +32,25 @@ abstract class Result<T, E> {
   abstract andThen<U, F = E>(fn: (data: T) => Result<U, F>): Result<U, E | F>;
   abstract orElse<F>(fn: (error: E) => Result<T, F>): Result<T, F>;
   abstract unwrapErr(): E;
+
+  /** Transposes a Result<Option<T>, E> into Option<Result<T, E>> */
+  abstract transpose<T2>(
+    this: Result<OptionType<T2>, E>
+  ): OptionType<Result<T2, E>>;
+
+  /** Converts to an array containing the value if Ok, or empty array if Err */
+  abstract toArray(): T[];
+
+  /** Checks structural equality with another Result */
+  abstract equals(other: Result<T, E>): boolean;
+
+  /** Transforms the contained value using an async function, if Ok */
+  abstract mapAsync<U>(fn: (data: T) => Promise<U>): Promise<Result<U, E>>;
+
+  /** Chains another async Result-returning operation, if Ok */
+  abstract flatMapAsync<U, F = E>(
+    fn: (data: T) => Promise<Result<U, F>>
+  ): Promise<Result<U, E | F>>;
 
   /**
    * Pattern matches on this Result and executes the appropriate handler function.
@@ -768,6 +785,32 @@ abstract class Result<T, E> {
   }
 
   /**
+   * Converts an array of Results into a Result of array.
+   * Returns Ok(values) if all Results are Ok, Err(first error) if any is Err.
+   */
+  static sequence<T, E>(results: Result<T, E>[]): Result<T[], E> {
+    const values: T[] = [];
+    for (const result of results) {
+      if (result.isErr()) {
+        return Result.err(result.unwrapErr());
+      }
+      values.push(result.unwrap());
+    }
+    return Result.ok(values);
+  }
+
+  /**
+   * Maps a function over an array and sequences the results.
+   * Returns Ok(results) if all function calls return Ok, Err(first error) otherwise.
+   */
+  static traverse<T, U, E>(
+    values: T[],
+    fn: (value: T) => Result<U, E>
+  ): Result<U[], E> {
+    return Result.sequence(values.map(fn));
+  }
+
+  /**
    * Creates a function that chains multiple Result-returning functions together.
    *
    * This function takes a series of functions that each take a value and return a Result,
@@ -904,6 +947,35 @@ class Success<T> extends Result<T, never> {
   unwrapErr(): never {
     throw new Error("Success has no error");
   }
+
+  transpose<T2>(this: Success<OptionType<T2>>): OptionType<Result<T2, never>> {
+    const option = this.data as OptionType<T2>;
+    if (option.isSome()) {
+      return OptionType.some(Result.ok(option.unwrap()));
+    } else {
+      return OptionType.none();
+    }
+  }
+
+  toArray(): T[] {
+    return [this.data];
+  }
+
+  equals(other: Result<T, never>): boolean {
+    if (other.isErr()) return false;
+    return this.data === other.unwrap();
+  }
+
+  async mapAsync<U>(fn: (data: T) => Promise<U>): Promise<Result<U, never>> {
+    const result = await fn(this.data);
+    return Result.ok(result);
+  }
+
+  async flatMapAsync<U, F = never>(
+    fn: (data: T) => Promise<Result<U, F>>
+  ): Promise<Result<U, never | F>> {
+    return await fn(this.data);
+  }
 }
 
 class Failure<E> extends Result<never, E> {
@@ -994,6 +1066,29 @@ class Failure<E> extends Result<never, E> {
 
   unwrapErr(): E {
     return this.error;
+  }
+
+  transpose<T2>(this: Failure<E>): OptionType<Result<T2, E>> {
+    return OptionType.some(Result.err(this.error));
+  }
+
+  toArray<T>(): T[] {
+    return [];
+  }
+
+  equals<T>(other: Result<T, E>): boolean {
+    if (other.isOk()) return false;
+    return this.error === other.unwrapErr();
+  }
+
+  async mapAsync<T, U>(_fn: (data: T) => Promise<U>): Promise<Result<U, E>> {
+    return Result.err(this.error);
+  }
+
+  async flatMapAsync<T, U, F = E>(
+    _fn: (data: T) => Promise<Result<U, F>>
+  ): Promise<Result<U, E | F>> {
+    return Result.err(this.error);
   }
 }
 

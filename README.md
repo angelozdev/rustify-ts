@@ -1,55 +1,27 @@
 # rustify-ts
 
-<div align="center">
-
-![Rustify-TS Logo](https://img.shields.io/badge/🦀-rustify--ts-orange?style=for-the-badge&logo=rust)
-
-**Rustify your TypeScript codebase with battle-tested error handling patterns**
-
-_Bring Rust's legendary **Result<T,E>** and **Option<T>** monads to TypeScript with zero-cost abstractions and enterprise-grade reliability._
+A TypeScript library that brings Rust's `Result<T, E>` and `Option<T>` patterns to TypeScript for safer error handling and null safety.
 
 [![NPM Version](https://img.shields.io/npm/v/rustify-ts.svg?style=flat-square&color=cb3837)](https://www.npmjs.com/package/rustify-ts)
-[![Downloads](https://img.shields.io/npm/dm/rustify-ts.svg?style=flat-square&color=success)](https://www.npmjs.com/package/rustify-ts)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/rustify-ts?style=flat-square&color=brightgreen)](https://bundlephobia.com/package/rustify-ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/npm/l/rustify-ts.svg?style=flat-square&color=blue)](https://github.com/angelozdev/rustify-ts/blob/main/LICENSE)
 
-![GitHub Stars](https://img.shields.io/github/stars/angelozdev/rustify-ts?style=flat-square&color=yellow&logo=github)
-![Production Ready](https://img.shields.io/badge/Production-Ready-success?style=flat-square)
-![Team Size](https://img.shields.io/badge/Team-Enterprise-orange?style=flat-square)
+## Features
 
-_🚀 Trusted by Fortune 500 companies • 📈 Processing 10M+ operations/day • 🌍 Used in 50+ countries_
+- 🛡️ **Type-safe error handling** with `Result<T, E>`
+- 🎯 **Null safety** with `Option<T>`
+- 🔗 **Monadic operations** for chaining transformations
+- 🎨 **Pattern matching** for clean control flow
+- 📦 **Tree-shakeable** and lightweight
+- 🌐 **Universal** - works in Node.js, browsers, and other JavaScript environments
 
-</div>
-
----
-
-## 🌟 Why Choose Rustify-TS?
-
-> _"The missing piece that TypeScript developers have been waiting for"_ — **TechCrunch**
-
-TypeScript developers have long envied Rust's elegant error handling. **rustify-ts** bridges that gap, delivering Rust's proven patterns with TypeScript's familiar syntax.
-
-**Built by a world-class engineering team** with decades of combined experience from Google, Microsoft, Mozilla, and leading fintech companies. Battle-tested in high-frequency trading systems, banking infrastructure, and mission-critical applications handling **billions of operations monthly**.
-
-### 🎯 **Enterprise Features**
-
-- 🛡️ **Zero Runtime Errors** — Eliminate null pointer exceptions forever
-- 🔥 **Blazing Fast** — Zero-cost abstractions with near-native performance
-- 🎨 **Developer Experience** — IntelliSense that actually helps you write better code
-- 🔒 **Type Safety** — Compile-time guarantees that your error handling is correct
-- 📦 **Tree Shakeable** — Only 2KB gzipped, grows with your needs
-- 🌐 **Universal** — Works in Node.js, browsers, Edge, Deno, and Bun
-
----
-
-## 📦 Installation
+## Installation
 
 ```bash
 # npm
 npm install rustify-ts
 
-# pnpm (recommended)
+# pnpm
 pnpm add rustify-ts
 
 # yarn
@@ -59,45 +31,45 @@ yarn add rustify-ts
 bun add rustify-ts
 ```
 
-## ⚡ Quick Start
+## Quick Start
 
-### Result<T, E> - Bulletproof Error Handling
+### Result<T, E> - Error Handling
 
 ```typescript
 import { ok, err, Result } from "rustify-ts";
 
-// Create Results with Rust-style constructors
+// Create Results
 const success = ok("Data loaded successfully");
 const failure = err("Network timeout");
 
-// Safe async operations - no more unhandled promise rejections!
+// Safe async operations
 const apiResult = await Result.tryCatch(async () => {
-  const response = await fetch("/api/critical-data");
+  const response = await fetch("/api/data");
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
   return await response.json();
 });
 
-// Chain operations safely - stop at first error
+// Chain operations safely
 const processedData = apiResult
-  .map((data) => data.items) // Transform success value
-  .flatMap((items) => validateItems(items)) // Chain another Result operation
-  .map((items) => items.slice(0, 10)); // Transform again
+  .map((data) => data.items)
+  .flatMap((items) => validateItems(items))
+  .map((items) => items.slice(0, 10));
 
-// Handle success and failure with pattern matching
+// Handle results with pattern matching
 const outcome = processedData.match({
   ok: (data) => ({ success: true, data }),
   err: (error) => ({ success: false, error: error.message }),
 });
 ```
 
-### Option<T> - Tame the Billion Dollar Mistake
+### Option<T> - Null Safety
 
 ```typescript
 import { some, none, Option } from "rustify-ts";
 
-// Create Options with Rust-style constructors
+// Create Options
 const user = some({ name: "John", age: 30 });
 const empty = none();
 
@@ -106,65 +78,36 @@ const currentUser = Option.fromNullable(getCurrentUser());
 
 // Chain transformations without null checks
 const greeting = currentUser
-  .map((user) => user.profile) // Transform if present
-  .flatMap((profile) => Option.fromNullable(profile.displayName)) // Chain safely
-  .or(currentUser.map((user) => user.email)) // Fallback to email
-  .unwrapOr("Anonymous User"); // Final default
+  .map((user) => user.profile)
+  .flatMap((profile) => Option.fromNullable(profile.displayName))
+  .or(currentUser.map((user) => user.email))
+  .unwrapOr("Anonymous User");
 
-// Pattern matching for clean control flow
+// Pattern matching
 const userStatus = currentUser.match({
   some: (user) => `Welcome back, ${user.name}!`,
   none: () => "Please log in to continue",
 });
 ```
 
----
+## API Documentation
 
-## 🏆 **Used By Industry Leaders**
+### Result<T, E>
 
-<div align="center">
-
-_Companies using rustify-ts in production (NDAs prevent us from showing logos)_
-
-**Financial Services** • **E-commerce Platforms** • **Gaming Companies** • **Healthcare Systems** • **Government Agencies**
-
-_"rustify-ts reduced our production errors by 89% in the first month"_ — **Senior Engineering Manager, Fortune 100**
-
-</div>
-
----
-
-## 🚀 **Performance Benchmarks**
-
-| Operation       | rustify-ts | fp-ts | neverthrow | Native try/catch |
-| --------------- | ---------- | ----- | ---------- | ---------------- |
-| Result Creation | **1.2ns**  | 3.4ns | 2.8ns      | 0.8ns            |
-| Map Operations  | **0.9ns**  | 2.1ns | 1.8ns      | N/A              |
-| Error Handling  | **1.1ns**  | 3.2ns | 2.5ns      | 15.3ns\*         |
-
-_\*Including exception stack trace generation_
-
----
-
-## 📚 **Comprehensive API**
-
-### 🎯 **Result<T, E>** - Mission-Critical Error Handling
-
-#### ⚡ **Core Constructors**
+#### Core Constructors
 
 ```typescript
-// Rust-style constructors (recommended)
-import { ok, err } from "rustify-ts";
+import { ok, err, Result } from "rustify-ts";
 
-const success = ok("Operation completed");         // Create success
-const failure = err("Something went wrong");       // Create failure
+const success = ok("Operation completed");
+const failure = err("Something went wrong");
 
-// Class-based constructors
-Result.ok<T>(value: T)                            // Create success
-Result.err<E>(error: E)                           // Create failure
+// Static methods
+Result.ok<T>(value: T)
+Result.err<E>(error: E)
 ```
 
-#### 🛡️ **Safe Execution**
+#### Safe Execution
 
 ```typescript
 // Async operations with automatic error catching
@@ -180,27 +123,27 @@ const parsed = Result.safeTry(() => JSON.parse(jsonString));
 const user = Result.fromNullable(getUserById(123), "User not found");
 ```
 
-#### 🔄 **Transformations**
+#### Transformations
 
 ```typescript
 // Transform success values
-result.map((data) => data.toUpperCase()); // Result<string, E>
+result.map((data) => data.toUpperCase());
 
 // Transform error values
-result.mapError((err) => `Failed: ${err}`); // Result<T, string>
+result.mapError((err) => `Failed: ${err}`);
 
 // Chain operations that can fail
-result.flatMap((data) => validateData(data)); // Monadic chaining
+result.flatMap((data) => validateData(data));
 result.andThen((data) => processData(data)); // Alias for flatMap
 
-// Pattern matching (most important!)
+// Pattern matching
 const outcome = result.match({
   ok: (data) => `Success: ${data}`,
   err: (error) => `Error: ${error}`,
 });
 ```
 
-#### 📊 **State Checking & Extraction**
+#### State Checking & Extraction
 
 ```typescript
 // Check state
@@ -212,49 +155,26 @@ if (result.isOk()) {
 
 // Extract values
 const value = result.unwrap(); // Throws if error
-const safeValue = result.unwrapOr("default"); // Returns default if error
+const safeValue = result.unwrapOr("default");
 const errorValue = result.unwrapErr(); // Get error (only for failures)
 ```
 
-#### 🚀 **Advanced Operations**
+### Option<T>
+
+#### Core Constructors
 
 ```typescript
-// Combine multiple Results (fail-fast)
-const combined = Result.all([result1, result2, result3]);
+import { some, none, Option } from "rustify-ts";
 
-// Retry operations with exponential backoff
-const retriedResult = await Result.retry(() => unstableApiCall(), {
-  maxAttempts: 3,
-  baseDelay: 100,
-});
+const user = some({ name: "John", age: 30 });
+const empty = none();
 
-// Add timeout to promises
-const timedResult = await Result.withTimeout(
-  slowApiCall(),
-  5000 // 5 second timeout
-);
-
-// Collect all errors instead of failing fast
-const allResults = Result.combineWithAllErrors([result1, result2, result3]);
+// Static methods
+Option.some<T>(value: T)
+Option.none<T>()
 ```
 
-### 🎯 **Option<T>** - Elegant Null Safety
-
-#### ⚡ **Core Constructors**
-
-```typescript
-// Rust-style constructors (recommended)
-import { some, none } from "rustify-ts";
-
-const user = some({ name: "John", age: 30 });     // Wrap value
-const empty = none();                              // Represent absence
-
-// Class-based constructors
-Option.some<T>(value: T)                          // Wrap non-null value
-Option.none<T>()                                  // Represent absence
-```
-
-#### 🛡️ **Smart Conversions**
+#### Smart Conversions
 
 ```typescript
 // Convert nullable values safely
@@ -267,27 +187,27 @@ const optionFromResult = Option.fromResult(someResult);
 const resultFromOption = Option.toResult(maybeUser, "User not found");
 ```
 
-#### 🔄 **Transformations**
+#### Transformations
 
 ```typescript
 // Transform contained values
-option.map((user) => user.name); // Option<string>
+option.map((user) => user.name);
 
 // Chain operations that might fail
-option.flatMap((user) => findUserProfile(user)); // Monadic chaining
+option.flatMap((user) => findUserProfile(user));
 option.andThen((user) => validateUser(user)); // Alias for flatMap
 
 // Filter values conditionally
-option.filter((user) => user.isActive); // Keep only if predicate passes
+option.filter((user) => user.isActive);
 
-// Pattern matching (most important!)
+// Pattern matching
 const greeting = option.match({
   some: (user) => `Hello, ${user.name}!`,
   none: () => "Hello, stranger!",
 });
 ```
 
-#### 📊 **State Checking & Extraction**
+#### State Checking & Extraction
 
 ```typescript
 // Check state
@@ -299,11 +219,11 @@ if (option.isSome()) {
 
 // Extract values
 const value = option.unwrap(); // Throws if None
-const safeValue = option.unwrapOr("default"); // Returns default if None
+const safeValue = option.unwrapOr("default");
 const computedValue = option.unwrapOrElse(() => computeDefault());
 ```
 
-#### 🔗 **Combinators**
+#### Combinators
 
 ```typescript
 // Fallback chaining
@@ -319,14 +239,85 @@ const tuple = option1.zip(option2); // Option<[T, U]>
 const exclusive = option1.xor(option2); // Some only if exactly one is Some
 ```
 
----
+## Advanced Features
 
-## 🎨 **Common Patterns**
+### New Methods
 
-### 🔄 **Converting from try/catch**
+#### Transpose Operations
 
 ```typescript
-// ❌ Old way - prone to unhandled errors
+// Transform nested structures between Option<Result<T, E>> and Result<Option<T>, E>
+const optionResult = Option.some(Result.ok(42));
+const resultOption = optionResult.transpose(); // Result.ok(Option.some(42))
+
+const resultOption = Result.ok(Option.some(42));
+const optionResult = resultOption.transpose(); // Option.some(Result.ok(42))
+```
+
+#### Array & Nullable Conversion
+
+```typescript
+// Convert to arrays
+Option.some(42).toArray(); // [42]
+Option.none().toArray(); // []
+Result.ok(42).toArray(); // [42]
+Result.err("error").toArray(); // []
+
+// Convert Option to nullable
+Option.some(42).toNullable(); // 42
+Option.none().toNullable(); // null
+
+// Create Option from truthy/falsy values
+Option.fromTruthy("hello"); // Option.some("hello")
+Option.fromTruthy(""); // Option.none()
+```
+
+#### Async Operations
+
+```typescript
+// Async transformations
+const option = Option.some(5);
+const asyncMapped = await option.mapAsync(async (x) => x * 2); // Option.some(10)
+
+const result = Result.ok(5);
+const asyncResult = await result.mapAsync(async (x) => x * 2); // Result.ok(10)
+```
+
+#### Equality Checking
+
+```typescript
+// Structural equality comparison
+Option.some(42).equals(Option.some(42)); // true
+Option.some(42).equals(Option.none()); // false
+
+Result.ok(42).equals(Result.ok(42)); // true
+Result.err("error").equals(Result.err("error")); // true
+```
+
+#### Sequence & Traverse
+
+```typescript
+// Convert [Option<T>] → Option<[T]>
+const options = [Option.some(1), Option.some(2), Option.some(3)];
+const sequenced = Option.sequence(options); // Option.some([1, 2, 3])
+
+// Map then sequence in one operation
+const numbers = [1, 2, 3];
+const doubled = Option.traverse(numbers, (x) =>
+  x > 0 ? Option.some(x * 2) : Option.none()
+); // Option.some([2, 4, 6])
+
+// Same patterns work for Result
+const results = [Result.ok(1), Result.ok(2), Result.ok(3)];
+const allOk = Result.sequence(results); // Result.ok([1, 2, 3])
+```
+
+## Common Patterns
+
+### Converting from try/catch
+
+```typescript
+// Before
 async function fetchUser(id: string) {
   try {
     const response = await fetch(`/api/users/${id}`);
@@ -334,11 +325,11 @@ async function fetchUser(id: string) {
     return user;
   } catch (error) {
     console.error("Failed to fetch user:", error);
-    throw error; // Error bubbles up unexpectedly
+    throw error;
   }
 }
 
-// ✅ New way - explicit error handling
+// After
 async function fetchUser(id: string): Promise<Result<User, string>> {
   return await Result.tryCatch(async () => {
     const response = await fetch(`/api/users/${id}`);
@@ -349,7 +340,7 @@ async function fetchUser(id: string): Promise<Result<User, string>> {
   });
 }
 
-// Usage - errors are handled explicitly
+// Usage
 const userResult = await fetchUser("123");
 const message = userResult.match({
   ok: (user) => `Welcome ${user.name}!`,
@@ -357,41 +348,32 @@ const message = userResult.match({
 });
 ```
 
-### 🔗 **Chaining Operations**
+### Chaining Operations
 
 ```typescript
 // Chain multiple operations that can fail
 const processUserData = (rawData: string) => {
-  return Result.safeTry(() => JSON.parse(rawData)) // Parse JSON
-    .flatMap((data) => validateUserSchema(data)) // Validate schema
-    .flatMap((user) => enrichWithProfile(user)) // Add profile data
-    .flatMap((user) => saveToDatabase(user)) // Save to DB
-    .map((user) => ({ success: true, userId: user.id })); // Transform result
+  return Result.safeTry(() => JSON.parse(rawData))
+    .flatMap((data) => validateUserSchema(data))
+    .flatMap((user) => enrichWithProfile(user))
+    .flatMap((user) => saveToDatabase(user))
+    .map((user) => ({ success: true, userId: user.id }));
 };
-
-// Single error handling for entire chain
-const result = processUserData(jsonString);
-if (result.isErr()) {
-  console.error("Processing failed:", result.unwrapErr());
-}
 ```
 
-### 🛡️ **Null Safety with Options**
+### Null Safety with Options
 
 ```typescript
-// ❌ Old way - null checks everywhere
+// Before
 function getUserDisplayName(userId?: string): string {
   if (!userId) return "Guest";
-
   const user = findUserById(userId);
   if (!user) return "Unknown User";
-
   if (!user.profile) return user.email || "No Email";
-
   return user.profile.displayName || user.profile.firstName || "Anonymous";
 }
 
-// ✅ New way - chain transformations safely
+// After
 function getUserDisplayName(userId?: string): string {
   return Option.fromNullable(userId)
     .flatMap((id) => Option.fromNullable(findUserById(id)))
@@ -404,431 +386,20 @@ function getUserDisplayName(userId?: string): string {
 }
 ```
 
-### 🚀 **Combining Results**
-
-```typescript
-// Validate multiple fields and collect all errors
-const validateRegistration = (data: RegistrationData) => {
-  const emailResult = validateEmail(data.email);
-  const passwordResult = validatePassword(data.password);
-  const ageResult = validateAge(data.age);
-
-  // Fail-fast: return first error
-  const combined = Result.all([emailResult, passwordResult, ageResult]);
-
-  // Or collect all errors for better UX
-  const allErrors = Result.combineWithAllErrors([
-    emailResult,
-    passwordResult,
-    ageResult,
-  ]);
-
-  return allErrors.match({
-    ok: (validatedData) => ({ success: true, data: validatedData }),
-    err: (errors) => ({ success: false, errors: errors }),
-  });
-};
-```
-
-### ⚡ **Async Pattern with Retries**
-
-```typescript
-// Robust API calls with retry logic
-const callExternalAPI = async (endpoint: string) => {
-  return await Result.retry(
-    async () => {
-      const response = await fetch(endpoint);
-
-      // Retry on server errors (5xx) but not client errors (4xx)
-      if (response.status >= 500) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      if (!response.ok) {
-        return err(`Client error: ${response.status}`);
-      }
-
-      return ok(await response.json());
-    },
-    {
-      maxAttempts: 3,
-      baseDelay: 1000, // Start with 1 second
-      maxDelay: 10000, // Cap at 10 seconds
-      exponentialBase: 2, // Double delay each retry
-    }
-  );
-};
-```
-
-### 🎯 **Form Validation Pipeline**
-
-```typescript
-interface UserForm {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  age: number;
-}
-
-const validateUserForm = (
-  form: UserForm
-): Result<ValidatedUser, ValidationError[]> => {
-  const validators = [
-    () => validateEmail(form.email),
-    () => validatePassword(form.password),
-    () => validatePasswordMatch(form.password, form.confirmPassword),
-    () => validateAge(form.age),
-  ];
-
-  // Collect all validation errors
-  const results = validators.map((validator) => validator());
-  return Result.combineWithAllErrors(results).map(
-    ([email, password, _, age]) => ({ email, password, age })
-  );
-};
-
-// Usage in React/Vue component
-const handleSubmit = async (formData: UserForm) => {
-  const validation = validateUserForm(formData);
-
-  validation.match({
-    ok: async (validatedData) => {
-      const result = await createUser(validatedData);
-      // Handle success...
-    },
-    err: (errors) => {
-      setFormErrors(errors); // Show all validation errors
-    },
-  });
-};
-```
-
----
-
-## 🔧 **Real-World Examples**
-
-### 💳 **Financial Transaction Processing**
-
-```typescript
-import { ok, err, Result } from "rustify-ts";
-
-const processPayment = async (paymentData: PaymentRequest) => {
-  // Validate payment data
-  const validation = validatePaymentData(paymentData);
-  if (!validation.isValid) return err(validation.error);
-
-  // Process with multiple providers for resilience
-  const providers = [StripeProvider, PayPalProvider, SquareProvider];
-
-  for (const provider of providers) {
-    const result = await Result.withTimeout(
-      provider.processPayment(paymentData),
-      5000 // 5s timeout
-    );
-
-    if (result.isOk()) {
-      return ok({
-        success: true,
-        transactionId: result.unwrap().id,
-        amount: result.unwrap().amount,
-      });
-    }
-  }
-
-  return err({
-    success: false,
-    error: "All payment providers failed",
-    retryable: true,
-  });
-};
-```
-
-### 🔐 **Authentication Pipeline**
-
-```typescript
-import { some, none } from "rustify-ts";
-
-const authenticateUser = (token: string) => {
-  if (!token || token.length === 0) {
-    return none();
-  }
-
-  const jwtResult = parseJwtToken(token);
-  if (!jwtResult || jwtResult.isExpired) {
-    return none();
-  }
-
-  const user = findUserById(jwtResult.userId);
-  if (!user || !user.isActive) {
-    return none();
-  }
-
-  return some(user);
-};
-
-// Usage with Rust-style pattern matching
-const authResult = authenticateUser(token).match({
-  some: (user) => ({ authenticated: true, user }),
-  none: () => ({ authenticated: false, reason: "Invalid token" }),
-});
-```
-
-### 🌐 **Distributed System Communication**
-
-```typescript
-import { ok, err } from "rustify-ts";
-
-const fetchWithFallback = async (urls: string[]) => {
-  const attempts = urls.map(async (url) => {
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        return ok(await response.json());
-      }
-      return err(`HTTP ${response.status}`);
-    } catch (error) {
-      return err(`Network error: ${error.message}`);
-    }
-  });
-
-  const results = await Promise.all(attempts);
-
-  // Find first successful result
-  for (const result of results) {
-    if (result.isOk()) {
-      return result; // Return the successful result
-    }
-  }
-
-  return err("All endpoints failed");
-};
-```
-
----
-
-## 🔄 **Migration Guide**
-
-### 📋 **Quick Reference: Before & After**
-
-| Pattern                  | ❌ Old Way              | ✅ With rustify-ts              |
-| ------------------------ | ----------------------- | ------------------------------- | ---------- | ---------------------------- |
-| **Error Handling**       | `try/catch`             | `Result.tryCatch()`             |
-| **Null Checks**          | `if (value != null)`    | `Option.fromNullable(value)`    |
-| **Default Values**       | `value                  |                                 | "default"` | `option.unwrapOr("default")` |
-| **Chaining**             | Nested if statements    | `.flatMap().map().filter()`     |
-| **Multiple Validations** | Manual error collection | `Result.combineWithAllErrors()` |
-
-### 🚀 **Step-by-Step Migration**
-
-#### Step 1: Start with Error-Prone Functions
-
-```typescript
-// Before
-const riskyOperation = async (data: string) => {
-  try {
-    const parsed = JSON.parse(data);
-    const validated = await validateData(parsed);
-    return await saveToDatabase(validated);
-  } catch (error) {
-    // Error handling often inconsistent or missing
-    throw error;
-  }
-};
-
-// After
-const riskyOperation = async (
-  data: string
-): Promise<Result<SavedData, string>> => {
-  return await Result.safeTry(() => JSON.parse(data))
-    .flatMap((parsed) => validateData(parsed))
-    .flatMap((validated) => Result.tryCatch(() => saveToDatabase(validated)));
-};
-```
-
-#### Step 2: Replace Nullable Return Types
-
-```typescript
-// Before
-function findUser(id: string): User | null {
-  const users = getUsers();
-  return users.find((u) => u.id === id) || null;
-}
-
-const user = findUser("123");
-if (user) {
-  console.log(user.name);
-} else {
-  console.log("User not found");
-}
-
-// After
-function findUser(id: string): Option<User> {
-  const users = getUsers();
-  return Option.fromNullable(users.find((u) => u.id === id));
-}
-
-const message = findUser("123").match({
-  some: (user) => `Found: ${user.name}`,
-  none: () => "User not found",
-});
-```
-
-#### Step 3: Convert Form Validation
-
-```typescript
-// Before
-const validateForm = (form: FormData) => {
-  const errors: string[] = [];
-
-  if (!form.email || !form.email.includes("@")) {
-    errors.push("Invalid email");
-  }
-
-  if (!form.password || form.password.length < 8) {
-    errors.push("Password too short");
-  }
-
-  if (form.age < 18) {
-    errors.push("Must be 18 or older");
-  }
-
-  return errors.length > 0 ? { success: false, errors } : { success: true };
-};
-
-// After
-const validateForm = (form: FormData): Result<ValidatedForm, string[]> => {
-  const validations = [
-    validateEmail(form.email),
-    validatePassword(form.password),
-    validateAge(form.age),
-  ];
-
-  return Result.combineWithAllErrors(validations).map(
-    ([email, password, age]) => ({ email, password, age })
-  );
-};
-```
-
-### ⚡ **Progressive Adoption Strategy**
-
-#### Phase 1: New Code (Recommended Start)
-
-- Use `Result` and `Option` for all new functions
-- Focus on async operations and data validation first
-- Start with utility functions and API calls
-
-#### Phase 2: Critical Paths
-
-- Migrate error-prone legacy code
-- Convert database operations and external API calls
-- Update authentication and authorization logic
-
-#### Phase 3: Comprehensive Migration
-
-- Refactor remaining nullable types to `Option`
-- Convert all error handling to `Result`
-- Update tests to work with new patterns
-
-### 💡 **Migration Tips**
-
-#### ✅ **Do's**
-
-- Start small with utility functions
-- Use `Result.tryCatch()` to wrap existing async code
-- Leverage `Option.fromNullable()` for easy conversion
-- Use pattern matching (`match()`) for cleaner control flow
-- Collect multiple errors with `combineWithAllErrors()`
-
-#### ❌ **Don'ts**
-
-- Don't try to migrate everything at once
-- Avoid mixing old and new error handling patterns
-- Don't use `unwrap()` without considering the consequences
-- Don't ignore the TypeScript compiler warnings
-- Avoid nested `if` statements when chaining is possible
-
-#### 🔧 **Interoperability Helpers**
-
-```typescript
-// Convert legacy Promise to Result
-const legacyApiCall = async (id: string): Promise<User> => {
-  // Existing implementation that might throw
-};
-
-const safeApiCall = (id: string): Promise<Result<User, unknown>> => {
-  return Result.tryCatch(() => legacyApiCall(id));
-};
-
-// Convert Result back to Promise for legacy code
-const resultToPromise = <T, E>(result: Result<T, E>): Promise<T> => {
-  return result.match({
-    ok: (value) => Promise.resolve(value),
-    err: (error) => Promise.reject(error),
-  });
-};
-```
-
----
-
-## 🧪 **Testing & Quality**
-
-- ✅ **100% Test Coverage** with property-based testing
-- ✅ **Mutation Testing** ensuring test quality
-- ✅ **Performance Benchmarks** on every commit
-- ✅ **Memory Leak Detection** with automated profiling
-- ✅ **Cross-Platform CI/CD** (Linux, macOS, Windows)
-- ✅ **Compatibility Testing** across Node.js 14+ and all modern browsers
-
----
-
-## 🏗️ **Development & Contributing**
+## Development
 
 ```bash
-# Setup development environment
-git clone https://github.com/angelozdev/rustify-ts.git
-cd rustify-ts
+# Setup
 pnpm install
 
-# Development workflow
-pnpm dev          # Watch mode development
-pnpm test         # Run comprehensive test suite
-pnpm test:watch   # Watch mode testing
-pnpm bench        # Performance benchmarks
-pnpm coverage     # Generate coverage report
+# Development
+pnpm dev          # Watch mode
+pnpm test         # Run tests
+pnpm test:coverage # Test coverage
+pnpm lint         # Type checking
 pnpm build        # Production build
 ```
 
-### 🌍 **Community & Support**
+## License
 
-- 📖 **[Complete Documentation](https://rustify-ts.dev/docs)**
-- 💬 **[Discord Community](https://discord.gg/rustify-ts)** (5,000+ developers)
-- 🐛 **[Issue Tracker](https://github.com/angelozdev/rustify-ts/issues)**
-- 💼 **Enterprise Support** available
-
----
-
-## 🎖️ **Awards & Recognition**
-
-- 🏆 **GitHub Trending #1** (JavaScript category, 2024)
-- ⭐ **Product Hunt #2 Developer Tool** of the month
-- 🥇 **TypeScript Community Choice Award** 2024
-- 📰 **Featured in JavaScript Weekly** 3 times
-
----
-
-## 📄 **License**
-
-ISC License - see [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**Made with 🦀 and ❤️ by the rustify-ts team**
-
-_Transforming TypeScript development, one Result at a time._
-
-[![Follow on GitHub](https://img.shields.io/github/followers/angelozdev?style=social)](https://github.com/angelozdev)
-[![Follow on Twitter](https://img.shields.io/twitter/follow/angelozdev?style=social)](https://twitter.com/angelozdev)
-
-</div>
+MIT License - see [LICENSE](LICENSE) file for details.

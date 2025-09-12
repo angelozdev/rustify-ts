@@ -78,6 +78,32 @@ abstract class Option<T> {
   /** Converts to Result with computed error for None case */
   abstract okOrElse<E>(errorFn: () => E): Result<T, E>;
 
+  /** Transposes an Option<Result<T, E>> into Result<Option<T>, E> */
+  abstract transpose<T2, E>(this: Option<Result<T2, E>>): Result<Option<T2>, E>;
+
+  /** Converts to an array containing the value if Some, or empty array if None */
+  abstract toArray(): T[];
+
+  /** Returns null if None, or the wrapped value if Some */
+  abstract toNullable(): T | null;
+
+  /** Checks structural equality with another Option */
+  abstract equals(other: Option<T>): boolean;
+
+  /** Transforms the contained value using an async function, if present */
+  abstract mapAsync<U>(fn: (data: T) => Promise<U>): Promise<Option<U>>;
+
+  /** Chains another async Option-returning operation, if a value is present */
+  abstract flatMapAsync<U>(
+    fn: (data: T) => Promise<Option<U>>
+  ): Promise<Option<U>>;
+
+  /** Combines this Option with another Option using a function, creating result if both are Some */
+  abstract zipWith<U, R>(other: Option<U>, fn: (a: T, b: U) => R): Option<R>;
+
+  /** Unzips an Option containing a tuple into a tuple of Options */
+  abstract unzip<A, B>(this: Option<[A, B]>): [Option<A>, Option<B>];
+
   /**
    * Pattern matches on this Option and executes the appropriate handler function.
    */
@@ -141,6 +167,38 @@ abstract class Option<T> {
    */
   static fromNullable<T>(value: T | null | undefined): Option<T> {
     return !isNullOrUndefined(value) ? Option.some(value) : Option.none();
+  }
+
+  /**
+   * Creates an Option from a truthy/falsy value.
+   * Returns Some(value) if value is truthy, None if falsy.
+   */
+  static fromTruthy<T>(value: T): Option<NonNullable<T>> {
+    return value ? Option.some(value as NonNullable<T>) : Option.none();
+  }
+
+  /**
+   * Converts an array of Options into an Option of array.
+   * Returns Some(values) if all Options are Some, None if any is None.
+   */
+  static sequence<T>(options: Option<T>[]): Option<T[]> {
+    const result: T[] = [];
+    for (const option of options) {
+      if (option.isNone()) {
+        return Option.none();
+      }
+      // TypeScript should know option is Some here
+      result.push((option as Some<T>).unwrap());
+    }
+    return Option.some(result);
+  }
+
+  /**
+   * Maps a function over an array and sequences the results.
+   * Returns Some(results) if all function calls return Some, None otherwise.
+   */
+  static traverse<T, U>(values: T[], fn: (value: T) => Option<U>): Option<U[]> {
+    return Option.sequence(values.map(fn));
   }
 
   /**
@@ -347,6 +405,49 @@ class Some<T> extends Option<T> {
   okOrElse<E>(_errorFn: () => E): Result<T, E> {
     return new Success(this.data);
   }
+
+  transpose<T2, E>(this: Some<Result<T2, E>>): Result<Option<T2>, E> {
+    const result = this.data as Result<T2, E>;
+    if (result.isOk()) {
+      return Result.ok(Option.some(result.unwrap()));
+    } else {
+      return Result.err(result.unwrapErr());
+    }
+  }
+
+  toArray(): T[] {
+    return [this.data];
+  }
+
+  toNullable(): T | null {
+    return this.data;
+  }
+
+  equals(other: Option<T>): boolean {
+    if (other.isNone()) return false;
+    return this.data === (other as Some<T>).unwrap();
+  }
+
+  async mapAsync<U>(fn: (data: T) => Promise<U>): Promise<Option<U>> {
+    const result = await fn(this.data);
+    return Option.some(result);
+  }
+
+  async flatMapAsync<U>(
+    fn: (data: T) => Promise<Option<U>>
+  ): Promise<Option<U>> {
+    return await fn(this.data);
+  }
+
+  zipWith<U, R>(other: Option<U>, fn: (a: T, b: U) => R): Option<R> {
+    if (other.isNone()) return Option.none();
+    return Option.some(fn(this.data, (other as Some<U>).unwrap()));
+  }
+
+  unzip<A, B>(this: Some<[A, B]>): [Option<A>, Option<B>] {
+    const [a, b] = this.data as [A, B];
+    return [Option.some(a), Option.some(b)];
+  }
 }
 
 /**
@@ -496,6 +597,40 @@ class None<T> extends Option<T> {
 
   okOrElse<E>(errorFn: () => E): Result<T, E> {
     return new Failure(errorFn());
+  }
+
+  transpose<T2, E>(this: None<Result<T2, E>>): Result<Option<T2>, E> {
+    return Result.ok(Option.none());
+  }
+
+  toArray(): T[] {
+    return [];
+  }
+
+  toNullable(): T | null {
+    return null;
+  }
+
+  equals(other: Option<T>): boolean {
+    return other.isNone();
+  }
+
+  async mapAsync<U>(_fn: (data: T) => Promise<U>): Promise<Option<U>> {
+    return Option.none();
+  }
+
+  async flatMapAsync<U>(
+    _fn: (data: T) => Promise<Option<U>>
+  ): Promise<Option<U>> {
+    return Option.none();
+  }
+
+  zipWith<U, R>(_other: Option<U>, _fn: (a: T, b: U) => R): Option<R> {
+    return Option.none();
+  }
+
+  unzip<A, B>(this: None<[A, B]>): [Option<A>, Option<B>] {
+    return [Option.none(), Option.none()];
   }
 }
 
