@@ -26,7 +26,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench:invariants": "tsup && node --expose-gc bench/invariants/i1-happy-alloc.mjs"
+    "bench:invariants": "tsup && node --expose-gc bench/invariants/i1-happy-alloc.mjs",
+    "bench:types": "node bench/types/check-time.mjs"
   },
   "repository": {
     "type": "git",
