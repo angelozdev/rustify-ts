@@ -3,7 +3,7 @@
   "bugs": {
     "url": "https://github.com/angelozdev/rustify-ts/issues"
   },
-  "description": "Rustify your TypeScript: Bring Rust's powerful Result<T,E> and Option<T> patterns to TypeScript for safe, functional error handling without exceptions.",
+  "description": "",
   "devDependencies": {
     "tsup": "8.5.0",
     "typescript": "5.9.2",
