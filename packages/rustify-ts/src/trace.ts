@@ -1,8 +1,10 @@
-// Capa 1 (R2): formateo estructural. No importa la clase Outcome —
-// opera sobre la forma {_tag, _v, _fr}, así core puede usar toError sin ciclo.
-
+/**
+ * Layer 1 (R2): structural formatting. Does not import the Outcome class —
+ * operates on the {_tag, _v, _fr} shape, so core can use toError without a cycle.
+ */
 export type Frame = {
-  readonly site: string // "andThen@sync/pipeline.ts:41"
+  /** e.g. "andThen@sync/pipeline.ts:41" */
+  readonly site: string
   readonly kind: 'origin' | 'through' | 'handled' | 'note'
   readonly note: string | undefined
 }
@@ -12,7 +14,7 @@ export type DefectPayload = {
   readonly stack: string | undefined
 }
 
-/** Forma estructural de Outcome. La clase de core la satisface. */
+/** Structural shape of Outcome; the core class satisfies it. */
 export type OutcomeShape = {
   readonly _tag: 0 | 1 | 2
   readonly _v: unknown
@@ -21,12 +23,12 @@ export type OutcomeShape = {
 
 let tracing = true
 
-/** Producción: los combinadores dejan de pushear frames. */
+/** Production: combinators stop pushing frames. */
 export function disableTracing(): void {
   tracing = false
 }
 
-/** Simétrico, para tests. */
+/** Symmetric counterpart, for tests. */
 export function enableTracing(): void {
   tracing = true
 }

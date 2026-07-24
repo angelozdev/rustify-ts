@@ -1,18 +1,16 @@
-// Capa 0 (R2): solo tipos, cero imports.
-
-/** Un error de dominio etiquetado. Base del sistema catchTag/TagOf. */
+/** Base of the catchTag/TagOf system: a domain error tagged with a discriminant. */
 export type Tagged = { readonly _tag: string }
 
-/** Unión de tags de un E tagged; never si E no es tagged. */
+/** Union of tags on a tagged E; never if E is not tagged. */
 export type TagOf<E> = E extends Tagged ? E['_tag'] : never
 
-// Vistas de tipos: runtime = una clase; tipos = unión discriminada
-// para narrowing de _v tras isOk()/isFail().
+/** Type-level view of the Ok state — runtime is one class; this discriminated-union shape narrows `_v` after `isOk()`/`isFail()`. */
 export interface Ok<T> {
   readonly _tag: 0
   readonly _v: T
 }
 
+/** Type-level view of the Fail state — see {@link Ok}. */
 export interface Fail<E> {
   readonly _tag: 1
   readonly _v: E
