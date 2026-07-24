@@ -23,3 +23,31 @@ describe('types helpers', () => {
     expectTypeOf<Fail<never>['_tag']>().toEqualTypeOf<1>()
   })
 })
+
+import type { FailOf, OkOf, Outcome } from '../src/core'
+import { die, fail, ok } from '../src/core'
+
+describe('core types', () => {
+  it('I2: Outcome<T, never> es firma válida y honesta', () => {
+    expectTypeOf(ok(1)).toEqualTypeOf<Outcome<number, never>>()
+    expectTypeOf(fail({ _tag: 'E' as const })).toEqualTypeOf<Outcome<never, { _tag: 'E' }>>()
+    expectTypeOf(die('x')).toEqualTypeOf<Outcome<never, never>>()
+  })
+
+  it('covarianza en T y E: never encaja en cualquier firma', () => {
+    expectTypeOf<Outcome<number, never>>().toMatchTypeOf<Outcome<number, { _tag: 'X' }>>()
+    expectTypeOf<Outcome<never, never>>().toMatchTypeOf<Outcome<number, { _tag: 'X' }>>()
+  })
+
+  it('OkOf/FailOf proyectan', () => {
+    type O = Outcome<number, { _tag: 'E' }>
+    expectTypeOf<OkOf<O>>().toEqualTypeOf<number>()
+    expectTypeOf<FailOf<O>>().toEqualTypeOf<{ _tag: 'E' }>()
+  })
+
+  it('narrowing de predicados: _v tipado tras el guard', () => {
+    const o = ok(1) as Outcome<number, { _tag: 'X'; n: number }>
+    if (o.isOk()) expectTypeOf(o._v).toEqualTypeOf<number>()
+    if (o.isFail()) expectTypeOf(o._v).toEqualTypeOf<{ _tag: 'X'; n: number }>()
+  })
+})
