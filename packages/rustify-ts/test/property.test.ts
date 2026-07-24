@@ -13,6 +13,7 @@ import {
   ok,
   orElse,
   tap,
+  V,
 } from '../src/index'
 
 type E = { _tag: 'E' }
@@ -64,6 +65,18 @@ const ops: ReadonlyArray<(o: O) => O> = [
   (o) => o.pipe(catchTags({ E: throwsOutcome })),
   (o) => o.pipe(catchAll(() => fail({ _tag: 'E' as const }))),
   (o) => o.pipe(orElse(throwsOutcome)),
+  (o) =>
+    V.struct({ a: o })
+      .map((v) => v.a)
+      .mapFail(() => ({ _tag: 'E' as const })),
+  (o) =>
+    V.all([o, ok(1)])
+      .map(([a]) => a)
+      .mapFail(() => ({ _tag: 'E' as const })),
+  (o) =>
+    V.tuple(o, fail({ _tag: 'E' as const }))
+      .map(([a]) => a)
+      .mapFail(() => ({ _tag: 'E' as const })),
 ]
 
 const seeds: ReadonlyArray<O> = [ok(1), fail({ _tag: 'E' as const }), die(boom)]
