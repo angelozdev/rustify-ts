@@ -5,10 +5,13 @@ import {
   FAIL,
   OK,
   type Outcome,
+  catchAll,
+  catchTags,
   die,
   fail,
   filterOrFail,
   ok,
+  orElse,
   tap,
 } from '../src/index'
 
@@ -16,6 +19,14 @@ type E = { _tag: 'E' }
 type O = Outcome<number, E>
 
 const boom = new Error('boom')
+
+const throwsOutcome = (): O => {
+  throw boom
+}
+
+const throwsError = (): E => {
+  throw boom
+}
 
 const ops: ReadonlyArray<(o: O) => O> = [
   (o) => o.map((n) => n + 1),
@@ -44,6 +55,15 @@ const ops: ReadonlyArray<(o: O) => O> = [
       }, { _tag: 'E' as const }),
     ),
   (o) => o.pipe(filterOrFail((n) => n > 0, { _tag: 'E' as const })),
+  (o) => o.mapFail(() => ({ _tag: 'E' as const })),
+  (o) => o.mapFail(throwsError),
+  (o) => o.catchTag('E', () => ok(0)),
+  (o) => o.catchTag('E', () => fail({ _tag: 'E' as const })),
+  (o) => o.catchTag('E', throwsOutcome),
+  (o) => o.pipe(catchTags({ E: () => ok(0) })),
+  (o) => o.pipe(catchTags({ E: throwsOutcome })),
+  (o) => o.pipe(catchAll(() => fail({ _tag: 'E' as const }))),
+  (o) => o.pipe(orElse(throwsOutcome)),
 ]
 
 const seeds: ReadonlyArray<O> = [ok(1), fail({ _tag: 'E' as const }), die(boom)]
