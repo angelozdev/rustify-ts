@@ -1,6 +1,6 @@
 /**
- * Layer 1 (R2): structural formatting. Does not import the Outcome class —
- * operates on the {_tag, _v, _fr} shape, so core can use toError without a cycle.
+ * Structural formatting over the {_tag, _v, _fr} shape. Does not import the
+ * Outcome class, so core.ts can import toError from here without a cycle.
  */
 export type Frame = {
   /** e.g. "andThen@sync/pipeline.ts:41" */
