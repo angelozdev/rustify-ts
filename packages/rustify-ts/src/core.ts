@@ -110,11 +110,26 @@ export class Outcome<T, E> {
    */
   annotate(note: string, site?: string): Outcome<T, E> {
     if (this._tag === OK || !__isTracing()) return this
-    return new Outcome<T, E>(
-      this._tag,
-      this._v,
-      (this._fr ?? NO_FRAMES).concat(__frame(site, 'annotate', 'note', note)),
-    )
+    return new Outcome<T, E>(this._tag, this._v, __appended(this, 'annotate', 'note', site, note))
+  }
+
+  /**
+   * Transforms the Fail error. Reshaping an error is an operation on the Fail
+   * channel, so the result carries a `through` frame marking where the error
+   * changed shape. On Ok/Defect it returns the same instance with no frame; if
+   * `f` throws, the result is a Defect.
+   */
+  mapFail<E2>(f: (e: E) => E2, site?: string): Outcome<T, E2> {
+    if (this._tag !== FAIL) return __pass(this)
+    try {
+      return new Outcome<T, E2>(
+        FAIL,
+        f(this._v as E),
+        __appended(this, 'mapFail', 'through', site, undefined),
+      )
+    } catch (cause) {
+      return __defect(cause, 'mapFail', site)
+    }
   }
 
   /**
@@ -211,11 +226,33 @@ export function __through<E>(
   site: string | undefined,
 ): Outcome<never, E> {
   if (!__isTracing()) return o as Outcome<never, E>
-  return new Outcome<never, E>(
-    o._tag,
-    o._v,
-    (o._fr ?? NO_FRAMES).concat(__frame(site, name, 'through', undefined)),
-  )
+  return new Outcome<never, E>(o._tag, o._v, __appended(o, name, 'through', site, undefined))
+}
+
+/**
+ * @internal
+ * Frame list for an outcome derived from `o`, with one frame appended when
+ * tracing is on. Never mutates the original list.
+ */
+export function __appended(
+  o: Outcome<unknown, unknown>,
+  name: string,
+  kind: Frame['kind'],
+  site: string | undefined,
+  note: string | undefined,
+): Frame[] {
+  const frames = o._fr ?? NO_FRAMES
+  return __isTracing() ? frames.concat(__frame(site, name, kind, note)) : frames
+}
+
+/**
+ * @internal
+ * Passes a failed outcome through unchanged. The `never` error keeps the
+ * result assignable to any narrowed error union without a cast at the call
+ * site.
+ */
+export function __pass<T>(o: Outcome<T, unknown>): Outcome<T, never> {
+  return o as Outcome<T, never>
 }
 
 /**
