@@ -3,7 +3,7 @@
  * package allowed to hold internal casts — all `any`/unsafe narrowing is
  * confined here and covered by the type tests in `test/types.test-d.ts`.
  */
-import type { Fail, Ok } from './types'
+import type { Fail, Ok, TagOf } from './types'
 import { __isTracing, toError, type DefectPayload, type Frame } from './trace'
 
 export const OK = 0 as const
@@ -130,6 +130,21 @@ export class Outcome<T, E> {
     } catch (cause) {
       return __defect(cause, 'mapFail', site)
     }
+  }
+
+  /**
+   * Recovers from a single tagged member of the error union, which the result
+   * type drops from `E`. A matching Fail runs the handler and the trace gets a
+   * `handled` frame; a Fail with any other tag, an Ok and a Defect all pass
+   * through as the same instance with no frame.
+   */
+  catchTag<K extends TagOf<E>, U, E2>(
+    tag: K,
+    h: (e: Extract<E, { readonly _tag: K }>) => Outcome<U, E2>,
+    site?: string,
+  ): Outcome<T | U, Exclude<E, { readonly _tag: K }> | E2> {
+    if (this._tag !== FAIL || !__hasTag(this._v, tag)) return __pass(this)
+    return __recover(this, h, 'catchTag', site, `catchTag('${tag}')`)
   }
 
   /**
@@ -262,6 +277,39 @@ export function __pass<T>(o: Outcome<T, unknown>): Outcome<T, never> {
  */
 export function __val<T>(o: Outcome<T, unknown>): T {
   return o._v as T
+}
+
+/** @internal */
+export function __hasTag(v: unknown, tag: string): boolean {
+  return typeof v === 'object' && v !== null && (v as { _tag?: unknown })._tag === tag
+}
+
+/**
+ * @internal
+ * Runs a recovery handler over a failed outcome. The result keeps the trace
+ * accumulated so far, a `handled` frame, and then the frames of the outcome
+ * the handler returned. Recovering to Ok drops the trace entirely, since Ok
+ * always carries a null frame list. A handler that throws yields a Defect.
+ */
+export function __recover<U, E2>(
+  o: Outcome<unknown, unknown>,
+  h: (e: never) => Outcome<U, E2>,
+  name: string,
+  site: string | undefined,
+  note: string | undefined,
+): Outcome<U, E2> {
+  let r: Outcome<U, E2>
+  try {
+    r = h(o._v as never)
+  } catch (cause) {
+    return __defect(cause, name, site)
+  }
+  if (r._tag === OK || !__isTracing()) return r
+  return new Outcome<U, E2>(
+    r._tag,
+    r._v,
+    __appended(o, name, 'handled', site, note).concat(r._fr ?? NO_FRAMES),
+  )
 }
 
 export function ok<T>(v: T): Outcome<T, never> {
