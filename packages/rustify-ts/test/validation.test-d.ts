@@ -44,6 +44,26 @@ describe('V.struct types', () => {
   })
 })
 
+describe('V.all / V.tuple types', () => {
+  it('V.all preserves positional types', () => {
+    const r = V.all([id, n])
+    expectTypeOf(r).toEqualTypeOf<Outcome<[string, number], Invalid<[typeof id, typeof n]>>>()
+  })
+
+  it('V.all fields is a tuple of optional errors', () => {
+    expectTypeOf<Invalid<[typeof id, typeof n]>['fields']>().toEqualTypeOf<[Empty?, TooLong?]>()
+  })
+
+  it('V.tuple preserves positional types', () => {
+    const r = V.tuple(id, n)
+    expectTypeOf(r).toEqualTypeOf<Outcome<[string, number], Invalid<[typeof id, typeof n]>>>()
+  })
+
+  it('an empty V.all is Ok of an empty tuple', () => {
+    expectTypeOf(V.all([])).toEqualTypeOf<Outcome<[], Invalid<[]>>>()
+  })
+})
+
 describe('Invalid enters catchTag with no adapter', () => {
   it('a chain starting at V.struct fits a hand-written error union', () => {
     const chain = V.struct({ id, n }).andThen((v): Outcome<Device, NotFound> => ok({ id: v.id }))

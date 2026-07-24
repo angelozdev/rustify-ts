@@ -76,3 +76,37 @@ describe('V.struct', () => {
     expect(formatTrace(o).split('\n')[0]).toBe('Fail(Invalid { fields: {…} })')
   })
 })
+
+describe('V.all and V.tuple', () => {
+  it('all Ok: the array of values in order', () => {
+    const o = V.all([ok('a'), ok(1)])
+    expect(o._tag).toBe(OK)
+    expect(o._v).toEqual(['a', 1])
+    expect(o._fr).toBeNull()
+  })
+
+  it('accumulates failures keyed by index, keeping the length', () => {
+    const o = V.all([ok('a'), fail(empty('1')), fail(tooLong(3))], 'V.all@app.ts:7')
+    expect(o._tag).toBe(FAIL)
+    expect(o._v).toEqual({
+      _tag: 'Invalid',
+      fields: [undefined, { _tag: 'Empty', field: '1' }, { _tag: 'TooLong', max: 3 }],
+    })
+    expect(o._fr).toEqual([{ site: 'V.all@app.ts:7', kind: 'origin', note: undefined }])
+  })
+
+  it('a Defect wins in V.all too', () => {
+    const o = V.all([fail(empty('0')), die(new Error('bug'))], 'V.all@app.ts:7')
+    expect(o._tag).toBe(DEFECT)
+  })
+
+  it('V.tuple takes its outcomes as arguments', () => {
+    const o = V.tuple(ok('a'), ok(1))
+    expect(o._v).toEqual(['a', 1])
+  })
+
+  it('V.tuple names its own frame', () => {
+    const o = V.tuple(fail(empty('0')))
+    expect(o._fr).toEqual([{ site: 'V.tuple@<unknown>', kind: 'origin', note: undefined }])
+  })
+})
