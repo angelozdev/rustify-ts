@@ -70,6 +70,92 @@ export class Outcome<T, E> {
     if (this._tag === FAIL) return onFail(this._v as E)
     return onDefect(this._v as DefectPayload)
   }
+
+  /**
+   * Transforms the Ok value. On Fail/Defect it passes through unchanged
+   * except for an appended `through` frame; `__through` returns
+   * `Outcome<never, E>`, which is assignable to `Outcome<U, E>` by
+   * covariance in `T`, so no cast is needed here.
+   */
+  map<U>(f: (t: T) => U, site?: string): Outcome<U, E> {
+    if (this._tag !== OK) return __through(this, 'map', site)
+    try {
+      return new Outcome<U, E>(OK, f(this._v as T), null)
+    } catch (cause) {
+      return __defect(cause, 'map', site)
+    }
+  }
+
+  /**
+   * Chains a callback that itself returns an Outcome, flattening the
+   * result. On Fail/Defect it passes through unchanged except for an
+   * appended `through` frame; `__through` returns `Outcome<never, E>`,
+   * assignable to `Outcome<U, E | E2>` by covariance in both `T` and `E`.
+   */
+  andThen<U, E2>(f: (t: T) => Outcome<U, E2>, site?: string): Outcome<U, E | E2> {
+    if (this._tag !== OK) return __through(this, 'andThen', site)
+    try {
+      return f(this._v as T)
+    } catch (cause) {
+      return __defect(cause, 'andThen', site)
+    }
+  }
+
+  /**
+   * Attaches a diagnostic note. On Ok this is a strict no-op returning the
+   * same instance with zero allocation, since the happy path must never
+   * allocate: context for a later failure is added via `mapFail`, not by
+   * annotating a value that already succeeded. On Fail/Defect it appends a
+   * `note` frame.
+   */
+  annotate(note: string, site?: string): Outcome<T, E> {
+    if (this._tag === OK || !__isTracing()) return this
+    return new Outcome<T, E>(
+      this._tag,
+      this._v,
+      (this._fr ?? NO_FRAMES).concat(__frame(site, 'annotate', 'note', note)),
+    )
+  }
+
+  /**
+   * Composes 0 to 6 functions left to right, threading `this` through the
+   * first one and each subsequent result through the next. The
+   * implementation signature splits the first parameter (typed with
+   * `this`) from the rest (typed `unknown`) because a plain
+   * `Array<(x: unknown) => unknown>` for every position does not satisfy
+   * the compiler's overload-compatibility check once an overload declares
+   * a `this`-typed parameter; splitting keeps the implementation signature
+   * on `unknown`, never `any`.
+   */
+  pipe(): this
+  pipe<A>(ab: (o: this) => A): A
+  pipe<A, B>(ab: (o: this) => A, bc: (a: A) => B): B
+  pipe<A, B, C>(ab: (o: this) => A, bc: (a: A) => B, cd: (b: B) => C): C
+  pipe<A, B, C, D>(ab: (o: this) => A, bc: (a: A) => B, cd: (b: B) => C, de: (c: C) => D): D
+  pipe<A, B, C, D, F>(
+    ab: (o: this) => A,
+    bc: (a: A) => B,
+    cd: (b: B) => C,
+    de: (c: C) => D,
+    ef: (d: D) => F,
+  ): F
+  pipe<A, B, C, D, F, G>(
+    ab: (o: this) => A,
+    bc: (a: A) => B,
+    cd: (b: B) => C,
+    de: (c: C) => D,
+    ef: (d: D) => F,
+    fg: (f: F) => G,
+  ): G
+  pipe(
+    first?: (o: this) => unknown,
+    ...rest: Array<(x: unknown) => unknown>
+  ): unknown {
+    if (!first) return this
+    let acc: unknown = first(this)
+    for (const f of rest) acc = f(acc)
+    return acc
+  }
 }
 
 export type OkOf<O> = O extends Outcome<infer T, any> ? T : never

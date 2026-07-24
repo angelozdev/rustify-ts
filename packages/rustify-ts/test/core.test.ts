@@ -98,3 +98,110 @@ describe('matchAll (table §8: onOk / onFail / onDefect)', () => {
     expect(die('x').matchAll(onOk, onFail, onDefect)).toBe('defect:x')
   })
 })
+
+describe('map (table §8)', () => {
+  it('on Ok: applies the callback, _fr stays null since the happy path allocates no trace', () => {
+    const o = ok(2).map((n) => n + 1)
+    expect(o._tag).toBe(OK)
+    expect(o._v).toBe(3)
+    expect(o._fr).toBeNull()
+  })
+
+  it('on Ok with a callback that throws: becomes a Defect with the combinator site, since no combinator may ever throw', () => {
+    const cause = new Error('cb boom')
+    const o = ok(1).map(() => {
+      throw cause
+    })
+    expect(o._tag).toBe(DEFECT)
+    expect((o._v as DefectPayload).cause).toBe(cause)
+    expect(o._fr).toEqual([{ site: 'map@<unknown>', kind: 'origin', note: undefined }])
+  })
+
+  it('on Fail: passes through intact plus a through frame (immutable append)', () => {
+    const base = fail({ _tag: 'E' as const }, 'fail@a.ts:1')
+    const o = base.map((n: never) => n)
+    expect(o).not.toBe(base)
+    expect(o._v).toBe(base._v)
+    expect(o._fr).toEqual([
+      { site: 'fail@a.ts:1', kind: 'origin', note: undefined },
+      { site: 'map@<unknown>', kind: 'through', note: undefined },
+    ])
+    expect(base._fr).toHaveLength(1)
+  })
+
+  it('on Defect: passes through intact plus a through frame', () => {
+    const o = die('bug', 'die@a.ts:1').map((n: never) => n)
+    expect(o._tag).toBe(DEFECT)
+    expect(o._fr).toEqual([
+      { site: 'die@a.ts:1', kind: 'origin', note: undefined },
+      { site: 'map@<unknown>', kind: 'through', note: undefined },
+    ])
+  })
+
+  it('with an injected site, uses the literal', () => {
+    const o = fail('e').map((n: never) => n, 'map@pipeline.ts:19')
+    expect(o._fr?.at(-1)).toEqual({ site: 'map@pipeline.ts:19', kind: 'through', note: undefined })
+  })
+
+  it('with tracing disabled: pass-through returns the SAME instance', () => {
+    disableTracing()
+    const base = fail('e')
+    expect(base.map((n: never) => n)).toBe(base)
+  })
+})
+
+describe('andThen (table §8)', () => {
+  it('on Ok: applies the callback and returns its Outcome', () => {
+    expect(ok(2).andThen((n) => ok(n * 2))._v).toBe(4)
+    const f = ok(2).andThen(() => fail({ _tag: 'E' as const }, 'fail@b.ts:2'))
+    expect(f._tag).toBe(FAIL)
+  })
+
+  it('on Ok with a callback that throws: becomes a Defect, since no combinator may ever throw', () => {
+    const o = ok(1).andThen(() => {
+      throw new Error('boom')
+    })
+    expect(o._tag).toBe(DEFECT)
+    expect(o._fr?.[0]?.site).toBe('andThen@<unknown>')
+  })
+
+  it('on Fail/Defect: passes through intact plus a through frame', () => {
+    expect(fail('e').andThen(() => ok(1))._fr?.at(-1)?.kind).toBe('through')
+    expect(die('d').andThen(() => ok(1))._fr?.at(-1)?.kind).toBe('through')
+  })
+})
+
+describe('annotate (table §8, strict no-alloc on Ok)', () => {
+  it('on Ok: no-op, returns the SAME instance, zero allocation', () => {
+    const o = ok(1)
+    expect(o.annotate('tenant:acme')).toBe(o)
+  })
+
+  it('on Fail: adds a note frame', () => {
+    const o = fail('e', 'fail@c.ts:3').annotate('tenant:acme', 'annotate@c.ts:4')
+    expect(o._fr?.at(-1)).toEqual({
+      site: 'annotate@c.ts:4',
+      kind: 'note',
+      note: 'tenant:acme',
+    })
+  })
+
+  it('on Defect: adds a note frame', () => {
+    expect(die('d').annotate('ctx')._fr?.at(-1)?.kind).toBe('note')
+  })
+})
+
+describe('pipe', () => {
+  it('chains free functions', () => {
+    const doubled = ok(3).pipe(
+      (o) => o.map((n) => n * 2),
+      (o) => o.match((n) => n, () => -1),
+    )
+    expect(doubled).toBe(6)
+  })
+
+  it('with no arguments returns this', () => {
+    const o = ok(1)
+    expect(o.pipe()).toBe(o)
+  })
+})

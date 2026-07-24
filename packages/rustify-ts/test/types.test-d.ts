@@ -50,4 +50,16 @@ describe('core types', () => {
     if (o.isOk()) expectTypeOf(o._v).toEqualTypeOf<number>()
     if (o.isFail()) expectTypeOf(o._v).toEqualTypeOf<{ _tag: 'X'; n: number }>()
   })
+
+  it('andThen accumulates the union of errors', () => {
+    const r = ok(1)
+      .andThen((n) => (n > 0 ? ok(n) : fail({ _tag: 'Neg' as const })))
+      .andThen((n) => (n < 100 ? ok(String(n)) : fail({ _tag: 'Big' as const })))
+    expectTypeOf(r).toEqualTypeOf<Outcome<string, { _tag: 'Neg' } | { _tag: 'Big' }>>()
+  })
+
+  it('map preserves E and transforms T', () => {
+    const o = fail({ _tag: 'E' as const }) as Outcome<number, { _tag: 'E' }>
+    expectTypeOf(o.map((n) => String(n))).toEqualTypeOf<Outcome<string, { _tag: 'E' }>>()
+  })
 })
