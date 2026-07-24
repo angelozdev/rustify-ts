@@ -8,6 +8,8 @@ import {
   Outcome,
   __catchTags,
   __defect,
+  __pass,
+  __recover,
   __through,
   __val,
   fail,
@@ -106,4 +108,23 @@ export function catchTags<E, H extends FailHandlers<E>>(
   Exclude<E, { readonly _tag: HandledTag<H> }> | FailOf<Recovered<H>>
 > {
   return (o) => __catchTags(o, handlers, site)
+}
+
+/**
+ * Recovers from every domain error, whatever its tag. It does NOT catch a
+ * Defect: "all" means every failure someone can write recovery code for.
+ */
+export function catchAll<E, U, E2>(
+  h: (e: E) => Outcome<U, E2>,
+  site?: string,
+): <T>(o: Outcome<T, E>) => Outcome<T | U, E2> {
+  return (o) => (o._tag === FAIL ? __recover(o, h, 'catchAll', site, undefined) : __pass(o))
+}
+
+/** Like {@link catchAll}, for recovery that ignores the error value. */
+export function orElse<U, E2>(
+  h: () => Outcome<U, E2>,
+  site?: string,
+): <T, E>(o: Outcome<T, E>) => Outcome<T | U, E2> {
+  return (o) => (o._tag === FAIL ? __recover(o, h, 'orElse', site, undefined) : __pass(o))
 }

@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from 'vitest'
 import { type Outcome, fail, ok } from '../src/core'
-import { catchTags } from '../src/combinators'
+import { catchAll, catchTags, orElse } from '../src/combinators'
 
 type Invalid = { _tag: 'Invalid'; fields: Record<string, unknown> }
 type NotFound = { _tag: 'NotFound'; id: string }
@@ -91,5 +91,27 @@ describe('catchTags types', () => {
   it('rejects a key that is not a tag of the union', () => {
     /* @ts-expect-error 'Nope' is not a tag of SyncErr */
     res.pipe(catchTags({ Nope: () => ok(cached) }))
+  })
+})
+
+describe('catchAll / orElse / mapFail types', () => {
+  it('catchAll and orElse clear E entirely', () => {
+    expectTypeOf(res.pipe(catchAll(() => ok(cached)))).toEqualTypeOf<Outcome<Device, never>>()
+    expectTypeOf(res.pipe(orElse(() => ok(cached)))).toEqualTypeOf<Outcome<Device, never>>()
+  })
+
+  it('catchAll receives the whole union', () => {
+    res.pipe(
+      catchAll((e) => {
+        expectTypeOf(e).toEqualTypeOf<SyncErr>()
+        return ok(cached)
+      }),
+    )
+  })
+
+  it('mapFail replaces E', () => {
+    expectTypeOf(res.mapFail((e) => ({ _tag: 'W' as const, inner: e._tag }))).toEqualTypeOf<
+      Outcome<Device, { _tag: 'W'; inner: SyncErr['_tag'] }>
+    >()
   })
 })

@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFECT, FAIL, OK, type Outcome, die, fail, ok } from '../src/core'
-import { catchTags } from '../src/combinators'
+import { catchAll, catchTags, orElse } from '../src/combinators'
 import { disableTracing, enableTracing, formatTrace } from '../src/trace'
 
 afterEach(() => enableTracing())
@@ -173,5 +173,53 @@ describe('catchTags', () => {
     )
     expect(o._tag).toBe(DEFECT)
     expect(o._fr).toEqual([{ site: 'catchTags@<unknown>', kind: 'origin', note: undefined }])
+  })
+})
+
+describe('catchAll and orElse', () => {
+  it('catchAll recovers from any tag and marks it handled', () => {
+    const o = fail(notFound('a'), 'fail@app.ts:1').pipe(
+      catchAll(
+        (e) => fail({ _tag: 'Wrapped' as const, id: e.id }, 'fail@handler.ts:9'),
+        'catchAll@app.ts:2',
+      ),
+    )
+    expect(o._fr).toEqual([
+      { site: 'fail@app.ts:1', kind: 'origin', note: undefined },
+      { site: 'catchAll@app.ts:2', kind: 'handled', note: undefined },
+      { site: 'fail@handler.ts:9', kind: 'origin', note: undefined },
+    ])
+  })
+
+  it('orElse ignores the error value', () => {
+    const spy = vi.fn(() => ok(9))
+    const o = fail(notFound('a')).pipe(orElse(spy))
+    expect(o._tag).toBe(OK)
+    expect(o._v).toBe(9)
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('neither one catches a Defect', () => {
+    const d = die(new Error('bug'))
+    const spy = vi.fn(() => ok(1))
+    expect(d.pipe(catchAll(spy))).toBe(d)
+    expect(d.pipe(orElse(spy))).toBe(d)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('Ok passes through as the SAME instance', () => {
+    const o = ok(1)
+    expect(o.pipe(catchAll(() => ok(2)))).toBe(o)
+    expect(o.pipe(orElse(() => ok(2)))).toBe(o)
+  })
+
+  it('a handler that throws becomes a Defect', () => {
+    const o = fail(notFound('a')).pipe(
+      catchAll(() => {
+        throw new Error('boom')
+      }),
+    )
+    expect(o._tag).toBe(DEFECT)
+    expect(o._fr).toEqual([{ site: 'catchAll@<unknown>', kind: 'origin', note: undefined }])
   })
 })

@@ -14,7 +14,7 @@ export {
   type FailOf,
   type OkOf,
 } from './core'
-export { catchTags, filterOrFail, tap, unwrapOr, unwrapOrThrow } from './combinators'
+export { catchAll, catchTags, filterOrFail, orElse, tap, unwrapOr, unwrapOrThrow } from './combinators'
 export {
   disableTracing,
   enableTracing,
