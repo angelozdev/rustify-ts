@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { DEFECT, FAIL, OK, type Outcome, die, fail, ok } from '../src/core'
+import { catchTags } from '../src/combinators'
 import { disableTracing, enableTracing, formatTrace } from '../src/trace'
 
 afterEach(() => enableTracing())
@@ -117,5 +118,55 @@ describe('catchTag', () => {
     const o = fail(notFound('a')).catchTag('NotFound', (e) => fail({ _tag: 'W' as const, id: e.id }))
     expect(o._v).toEqual({ _tag: 'W', id: 'a' })
     expect(o._fr).toEqual([])
+  })
+})
+
+describe('catchTags', () => {
+  it('recovers with the handler matching the tag and marks it handled', () => {
+    const o = fail(notFound('a'), 'fail@app.ts:1').pipe(
+      catchTags(
+        {
+          NotFound: (e) => fail({ _tag: 'Wrapped' as const, id: e.id }, 'fail@handler.ts:9'),
+          Network: () => ok(0),
+        },
+        'catchTags@app.ts:2',
+      ),
+    )
+    expect(o._tag).toBe(FAIL)
+    expect(o._v).toEqual({ _tag: 'Wrapped', id: 'a' })
+    expect(o._fr).toEqual([
+      { site: 'fail@app.ts:1', kind: 'origin', note: undefined },
+      { site: 'catchTags@app.ts:2', kind: 'handled', note: "catchTags('NotFound')" },
+      { site: 'fail@handler.ts:9', kind: 'origin', note: undefined },
+    ])
+  })
+
+  it('a tag with no handler passes through as the SAME instance', () => {
+    const f: Outcome<number, Err> = fail({ _tag: 'Network' as const })
+    expect(f.pipe(catchTags({ NotFound: () => ok(1) }))).toBe(f)
+  })
+
+  it('a Fail whose error is not tagged passes through as the SAME instance', () => {
+    const f = fail('plain string error')
+    expect(f.pipe(catchTags({}))).toBe(f)
+  })
+
+  it('Ok and Defect: the SAME instance', () => {
+    const o: Outcome<number, Err> = ok(1)
+    const d: Outcome<number, Err> = die(new Error('bug'))
+    expect(o.pipe(catchTags({ NotFound: () => ok(2) }))).toBe(o)
+    expect(d.pipe(catchTags({ NotFound: () => ok(2) }))).toBe(d)
+  })
+
+  it('a handler that throws becomes a Defect', () => {
+    const o = fail(notFound('a')).pipe(
+      catchTags({
+        NotFound: () => {
+          throw new Error('boom')
+        },
+      }),
+    )
+    expect(o._tag).toBe(DEFECT)
+    expect(o._fr).toEqual([{ site: 'catchTags@<unknown>', kind: 'origin', note: undefined }])
   })
 })

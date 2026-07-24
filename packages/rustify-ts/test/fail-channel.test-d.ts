@@ -1,5 +1,6 @@
 import { describe, expectTypeOf, it } from 'vitest'
 import { type Outcome, fail, ok } from '../src/core'
+import { catchTags } from '../src/combinators'
 
 type Invalid = { _tag: 'Invalid'; fields: Record<string, unknown> }
 type NotFound = { _tag: 'NotFound'; id: string }
@@ -60,5 +61,35 @@ describe('exhaustiveness after catching', () => {
         },
         () => 'defect',
       )
+  })
+})
+
+describe('catchTags types', () => {
+  it('subtracts every handled tag at once', () => {
+    const r = res.pipe(catchTags({ RateLimited: () => ok(cached), Network: () => ok(cached) }))
+    expectTypeOf(r).toEqualTypeOf<Outcome<Device, Invalid | NotFound | Forbidden>>()
+  })
+
+  it('adds the errors its handlers can produce', () => {
+    const r = res.pipe(catchTags({ Network: () => fail({ _tag: 'Boom' as const }) }))
+    expectTypeOf(r).toEqualTypeOf<
+      Outcome<Device, Invalid | NotFound | Forbidden | RateLimited | { _tag: 'Boom' }>
+    >()
+  })
+
+  it('the handlers receive the narrowed member', () => {
+    res.pipe(
+      catchTags({
+        NotFound: (e) => {
+          expectTypeOf(e).toEqualTypeOf<NotFound>()
+          return ok(cached)
+        },
+      }),
+    )
+  })
+
+  it('rejects a key that is not a tag of the union', () => {
+    /* @ts-expect-error 'Nope' is not a tag of SyncErr */
+    res.pipe(catchTags({ Nope: () => ok(cached) }))
   })
 })

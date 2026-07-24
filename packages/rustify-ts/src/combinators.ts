@@ -2,7 +2,19 @@
  * Free functions for the happy path and outputs, built on core's public API
  * (internal `@internal` helpers included) — never touch `_v` directly.
  */
-import { FAIL, OK, Outcome, __defect, __through, __val, fail } from './core'
+import {
+  FAIL,
+  OK,
+  Outcome,
+  __catchTags,
+  __defect,
+  __through,
+  __val,
+  fail,
+  type FailOf,
+  type OkOf,
+} from './core'
+import type { TagOf } from './types'
 import { toError } from './trace'
 
 const UNKNOWN = '<unknown>'
@@ -67,4 +79,31 @@ export function unwrapOr<T>(d: T): (o: Outcome<T, unknown>) => T {
 export function unwrapOrThrow<T>(o: Outcome<T, unknown>): T {
   if (o._tag === OK) return __val(o)
   throw toError(o)
+}
+
+/** Partial map from the tags of `E` to their recovery handlers. */
+type FailHandlers<E> = {
+  readonly [K in TagOf<E>]?: (e: Extract<E, { readonly _tag: K }>) => Outcome<any, any>
+}
+
+type HandledTag<H> = Extract<keyof H, string>
+type ReturnOf<F> = F extends (...args: never[]) => infer R ? R : never
+type Recovered<H> = ReturnOf<NonNullable<H[keyof H]>>
+
+/**
+ * Recovers from several tagged members of the error union at once. Every tag
+ * present in `handlers` is dropped from the resulting error union and the
+ * errors those handlers can produce are added. A Fail whose tag has no handler
+ * passes through as the same instance with no frame.
+ */
+export function catchTags<E, H extends FailHandlers<E>>(
+  handlers: H,
+  site?: string,
+): <T>(
+  o: Outcome<T, E>,
+) => Outcome<
+  T | OkOf<Recovered<H>>,
+  Exclude<E, { readonly _tag: HandledTag<H> }> | FailOf<Recovered<H>>
+> {
+  return (o) => __catchTags(o, handlers, site)
 }

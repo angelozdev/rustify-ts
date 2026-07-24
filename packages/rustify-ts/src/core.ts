@@ -393,3 +393,29 @@ export function ensure<E>(cond: boolean, e: E, site?: string): Outcome<void, E> 
 export function invariant(cond: boolean, msg: string, site?: string): Outcome<void, never> {
   return cond ? ok(undefined) : __defect(new Error(msg), 'invariant', site)
 }
+
+/** @internal */
+export function __tagOf(v: unknown): string | undefined {
+  if (typeof v !== 'object' || v === null) return undefined
+  const tag = (v as { _tag?: unknown })._tag
+  return typeof tag === 'string' ? tag : undefined
+}
+
+/**
+ * @internal
+ * Runtime of `catchTags`: looks the failed tag up in the handler record and
+ * recovers with it when present. Keeping the lookup here is what lets the
+ * public combinator stay free of type assertions.
+ */
+export function __catchTags<T, U, E2>(
+  o: Outcome<T, unknown>,
+  handlers: object,
+  site: string | undefined,
+): Outcome<T | U, E2> {
+  if (o._tag !== FAIL) return __pass(o)
+  const tag = __tagOf(o._v)
+  if (tag === undefined) return __pass(o)
+  const h = (handlers as Record<string, ((e: never) => Outcome<U, E2>) | undefined>)[tag]
+  if (h === undefined) return __pass(o)
+  return __recover(o, h, 'catchTags', site, `catchTags('${tag}')`)
+}
