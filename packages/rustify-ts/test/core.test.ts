@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { DEFECT, FAIL, OK, Outcome, die, fail, ok } from '../src/core'
-import { disableTracing, enableTracing, type DefectPayload } from '../src/trace'
+import { disableTracing, enableTracing, formatTrace, type DefectPayload } from '../src/trace'
 
 afterEach(() => enableTracing())
 
@@ -59,5 +59,42 @@ describe('predicates', () => {
     expect(ok(1).isDefect()).toBe(false)
     expect(fail('e').isFail()).toBe(true)
     expect(die('d').isDefect()).toBe(true)
+  })
+})
+
+describe('match (table §8: onOk / onFail / THROW)', () => {
+  it('Ok → onOk', () => {
+    expect(ok(2).match((n) => n * 10, () => -1)).toBe(20)
+  })
+
+  it('Fail → onFail', () => {
+    const o = fail({ _tag: 'E' as const, n: 7 })
+    expect(o.match(() => -1, (e) => e.n)).toBe(7)
+  })
+
+  it('Defect → rethrows toError (the most important API decision)', () => {
+    const cause = new Error('bug')
+    const o = die(cause, 'die@app.ts:9')
+    let thrown: unknown
+    try {
+      o.match(() => 'ok', () => 'fail')
+    } catch (e) {
+      thrown = e
+    }
+    expect(thrown).toBeInstanceOf(Error)
+    expect((thrown as Error).message).toBe('Defect(Error: bug)')
+    expect((thrown as Error).stack).toBe(formatTrace(o))
+    expect((thrown as Error).cause).toBe(cause)
+  })
+})
+
+describe('matchAll (table §8: onOk / onFail / onDefect)', () => {
+  it('three branches', () => {
+    const onOk = (n: number) => `ok:${n}`
+    const onFail = (e: { _tag: 'E' }) => `fail:${e._tag}`
+    const onDefect = (d: DefectPayload) => `defect:${String(d.cause)}`
+    expect(ok(1).matchAll(onOk, onFail, onDefect)).toBe('ok:1')
+    expect(fail({ _tag: 'E' as const }).matchAll(onOk, onFail, onDefect)).toBe('fail:E')
+    expect(die('x').matchAll(onOk, onFail, onDefect)).toBe('defect:x')
   })
 })

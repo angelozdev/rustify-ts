@@ -4,7 +4,7 @@
  * confined here and covered by the type tests in `test/types.test-d.ts`.
  */
 import type { Fail, Ok } from './types'
-import { __isTracing, type DefectPayload, type Frame } from './trace'
+import { __isTracing, toError, type DefectPayload, type Frame } from './trace'
 
 export const OK = 0 as const
 export const FAIL = 1 as const
@@ -46,6 +46,29 @@ export class Outcome<T, E> {
 
   isDefect(): boolean {
     return this._tag === DEFECT
+  }
+
+  /**
+   * Fallible pattern match: on Ok/Fail returns a result, on Defect rethrows.
+   * The path of least effort never swallows a bug.
+   */
+  match<R>(onOk: (t: T) => R, onFail: (e: E) => R): R {
+    if (this._tag === OK) return onOk(this._v as T)
+    if (this._tag === FAIL) return onFail(this._v as E)
+    throw toError(this)
+  }
+
+  /**
+   * Total pattern match: covers Ok/Fail/Defect explicitly, never throws.
+   */
+  matchAll<R>(
+    onOk: (t: T) => R,
+    onFail: (e: E) => R,
+    onDefect: (d: DefectPayload) => R,
+  ): R {
+    if (this._tag === OK) return onOk(this._v as T)
+    if (this._tag === FAIL) return onFail(this._v as E)
+    return onDefect(this._v as DefectPayload)
   }
 }
 
