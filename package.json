@@ -1,61 +1,10 @@
 {
-  "author": "Angelo Zambrano",
-  "bugs": {
-    "url": "https://github.com/angelozdev/rustify-ts/issues"
-  },
-  "description": "",
-  "devDependencies": {
-    "tsup": "8.5.0",
-    "typescript": "5.9.2",
-    "vitest": "3.2.4"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "homepage": "https://github.com/angelozdev/rustify-ts#readme",
-  "keywords": [
-    "rust",
-    "result",
-    "option",
-    "monad",
-    "functional",
-    "error-handling",
-    "rust-inspired",
-    "rustify",
-    "typescript",
-    "safe",
-    "fp",
-    "maybe"
-  ],
-  "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "name": "rustify-ts",
+  "name": "rustify-monorepo",
+  "private": true,
   "packageManager": "pnpm@10.15.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/angelozdev/rustify-ts.git"
-  },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "lint": "tsc --noEmit",
-    "prepublishOnly": "pnpm build",
-    "test": "vitest",
-    "test:coverage": "vitest --coverage"
-  },
-  "types": "dist/index.d.ts",
-  "version": "1.1.1"
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  }
 }
