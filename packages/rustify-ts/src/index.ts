@@ -23,6 +23,6 @@ export {
   type DefectPayload,
   type Frame,
 } from './trace'
-export { catchDefect } from './defect'
+export { catchDefect, sandbox, unsandbox } from './defect'
 export { V, type Invalid } from './validation'
 export type { Fail, Ok, TagOf, Tagged } from './types'

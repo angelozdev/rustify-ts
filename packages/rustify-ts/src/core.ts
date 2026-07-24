@@ -4,7 +4,14 @@
  * confined here and covered by the type tests in `test/types.test-d.ts`.
  */
 import type { Fail, Ok, TagOf } from './types'
-import { __isTracing, toError, type DefectPayload, type Frame } from './trace'
+import {
+  __PAYLOAD,
+  __isTracing,
+  toError,
+  type DefectPayload,
+  type Frame,
+  type __Minted,
+} from './trace'
 
 export const OK = 0 as const
 export const FAIL = 1 as const
@@ -210,15 +217,18 @@ export function __origin(site: string | undefined, name: string): Frame[] {
  * @internal
  * The `stack` getter is lazy: V8 only materializes `Error#stack` when it is
  * read, never before, so building a defect payload stays free until someone
- * actually inspects the stack.
+ * actually inspects the stack. The mark makes the payload recognizable after
+ * it has been moved into the typed error channel.
  */
 export function __payload(cause: unknown): DefectPayload {
-  return {
+  const p: __Minted = {
     cause,
     get stack() {
       return cause instanceof Error ? cause.stack : undefined
     },
+    [__PAYLOAD]: true,
   }
+  return p
 }
 
 /** @internal */

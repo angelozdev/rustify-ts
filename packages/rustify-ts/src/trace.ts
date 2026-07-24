@@ -14,6 +14,23 @@ export type DefectPayload = {
   readonly stack: string | undefined
 }
 
+/**
+ * @internal
+ * Marks the payloads this package mints. `unsandbox` uses it to tell a real
+ * sandboxed defect from any object that happens to have the same shape, and it
+ * is a symbol key so `Object.entries`, `JSON.stringify` and the trace
+ * formatter never see it.
+ */
+export const __PAYLOAD: unique symbol = Symbol('rustify.defect')
+
+/** @internal */
+export type __Minted = DefectPayload & { readonly [__PAYLOAD]: true }
+
+/** @internal */
+export function __isMinted(v: unknown): boolean {
+  return typeof v === 'object' && v !== null && __PAYLOAD in v
+}
+
 /** Structural shape of Outcome; the core class satisfies it. */
 export type OutcomeShape = {
   readonly _tag: 0 | 1 | 2
@@ -69,17 +86,22 @@ function isTaggedValue(v: unknown): v is { readonly _tag: string } {
   return typeof v === 'object' && v !== null && typeof (v as { _tag?: unknown })._tag === 'string'
 }
 
+function describeValue(v: unknown): string {
+  if (isTaggedValue(v)) {
+    const props = inspectProps(v, 0)
+    return props === null ? v._tag : `${v._tag} ${props}`
+  }
+  return inspectValue(v, 0)
+}
+
 function header(o: OutcomeShape): string {
   if (o._tag === 0) return `Ok(${inspectValue(o._v, 0)})`
   if (o._tag === 1) {
-    if (isTaggedValue(o._v)) {
-      const props = inspectProps(o._v, 0)
-      return props === null ? `Fail(${o._v._tag})` : `Fail(${o._v._tag} ${props})`
-    }
-    return `Fail(${inspectValue(o._v, 0)})`
+    return __isMinted(o._v)
+      ? `Fail(Defect(${describeValue((o._v as DefectPayload).cause)}))`
+      : `Fail(${describeValue(o._v)})`
   }
-  const cause = (o._v as DefectPayload).cause
-  return `Defect(${inspectValue(cause, 0)})`
+  return `Defect(${describeValue((o._v as DefectPayload).cause)})`
 }
 
 function renderFrame(f: Frame): string {
