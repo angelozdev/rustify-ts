@@ -414,8 +414,7 @@ export function __catchTags<T, U, E2>(
 ): Outcome<T | U, E2> {
   if (o._tag !== FAIL) return __pass(o)
   const tag = __tagOf(o._v)
-  if (tag === undefined) return __pass(o)
-  const h = (handlers as Record<string, ((e: never) => Outcome<U, E2>) | undefined>)[tag]
-  if (h === undefined) return __pass(o)
+  if (tag === undefined || !Object.hasOwn(handlers, tag)) return __pass(o)
+  const h = (handlers as Record<string, (e: never) => Outcome<U, E2>>)[tag]!
   return __recover(o, h, 'catchTags', site, `catchTags('${tag}')`)
 }

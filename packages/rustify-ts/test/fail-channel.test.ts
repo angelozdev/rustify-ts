@@ -146,6 +146,11 @@ describe('catchTags', () => {
     expect(f.pipe(catchTags({ NotFound: () => ok(1) }))).toBe(f)
   })
 
+  it('a tag colliding with an inherited Object property passes through as the SAME instance', () => {
+    const f: Outcome<number, { _tag: 'toString' }> = fail({ _tag: 'toString' as const })
+    expect(f.pipe(catchTags({ NotFound: () => ok(1) } as any))).toBe(f)
+  })
+
   it('a Fail whose error is not tagged passes through as the SAME instance', () => {
     const f = fail('plain string error')
     expect(f.pipe(catchTags({}))).toBe(f)
