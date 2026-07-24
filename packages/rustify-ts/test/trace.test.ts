@@ -21,7 +21,7 @@ const failShape: OutcomeShape = {
 }
 
 describe('formatTrace', () => {
-  it('formatea el ejemplo de referencia del spec §8', () => {
+  it('formats the reference example from spec §8', () => {
     expect(formatTrace(failShape)).toBe(
       [
         'Fail(RateLimited { retryInMs: 4200 })',
@@ -33,27 +33,27 @@ describe('formatTrace', () => {
     )
   })
 
-  it('Ok sin frames: solo header', () => {
+  it('Ok with no frames: header only', () => {
     expect(formatTrace({ _tag: 0, _v: 42, _fr: null })).toBe('Ok(42)')
     expect(formatTrace({ _tag: 0, _v: 'hi', _fr: null })).toBe('Ok("hi")')
   })
 
-  it('Fail no-tagged usa inspección plana', () => {
+  it('Fail non-tagged uses flat inspection', () => {
     expect(formatTrace({ _tag: 1, _v: 'boom', _fr: [] })).toBe('Fail("boom")')
   })
 
-  it('Fail tagged sin props extra omite las llaves', () => {
+  it('Fail tagged with no extra props omits the braces', () => {
     expect(formatTrace({ _tag: 1, _v: { _tag: 'Network' }, _fr: [] })).toBe('Fail(Network)')
   })
 
-  it('Defect con Error muestra name: message', () => {
+  it('Defect with Error shows name: message', () => {
     const payload: DefectPayload = { cause: new TypeError('x is not a function'), stack: undefined }
     expect(formatTrace({ _tag: 2, _v: payload, _fr: [] })).toBe(
       'Defect(TypeError: x is not a function)',
     )
   })
 
-  it('site sin @ degrada con gracia', () => {
+  it('site without @ degrades gracefully', () => {
     const o: OutcomeShape = {
       _tag: 1,
       _v: { _tag: 'X' },
@@ -64,13 +64,13 @@ describe('formatTrace', () => {
 })
 
 describe('toError', () => {
-  it('message = header, stack = traza completa', () => {
+  it('message = header, stack = full trace', () => {
     const err = toError(failShape)
     expect(err.message).toBe('Fail(RateLimited { retryInMs: 4200 })')
     expect(err.stack).toBe(formatTrace(failShape))
   })
 
-  it('preserva cause en Defect', () => {
+  it('preserves cause in Defect', () => {
     const cause = new Error('boom')
     const payload: DefectPayload = { cause, stack: undefined }
     const err = toError({ _tag: 2, _v: payload, _fr: [] })
@@ -82,7 +82,7 @@ describe('toError', () => {
 describe('tracing flag', () => {
   afterEach(() => enableTracing())
 
-  it('disableTracing/enableTracing conmutan el flag', () => {
+  it('disableTracing/enableTracing toggle the flag', () => {
     expect(__isTracing()).toBe(true)
     disableTracing()
     expect(__isTracing()).toBe(false)
