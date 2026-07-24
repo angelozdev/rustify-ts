@@ -1,5 +1,6 @@
 import { type Outcome, fail, ok } from '../../src/core'
 import { catchAll, catchTags, filterOrFail, orElse, tap } from '../../src/combinators'
+import { V } from '../../src/validation'
 
 type E01 = { _tag: 'Invalid'; fields: Record<string, unknown> }
 type E02 = { _tag: 'NotFound'; id: string }
@@ -78,3 +79,28 @@ export const pipeline = source
       }),
     ),
   )
+
+declare const f1: Outcome<string, E02>
+declare const f2: Outcome<number, E03>
+declare const f3: Outcome<boolean, E04>
+declare const f4: Outcome<string, E05>
+declare const f5: Outcome<number, E06>
+declare const f6: Outcome<string, E07>
+declare const f7: Outcome<number, E08>
+declare const f8: Outcome<string, E09>
+
+export const validated = V.struct({ f1, f2, f3, f4, f5, f6, f7, f8 })
+  .map((v) => ({ ...v, joined: `${v.f1}:${v.f4}:${v.f6}` }))
+  .andThen((v) => (v.f2 > 0 ? ok(v) : fail({ _tag: 'Conflict' as const, version: v.f2 })))
+  .catchTag('Invalid', (e) =>
+    fail({ _tag: 'Throttled' as const, queue: Object.keys(e.fields).join(',') }),
+  )
+  .mapFail((e) => ({ ...e, at: 'validation' as const }))
+
+export const collected = V.all([f1, f2, f3, f4, f5, f6, f7, f8])
+  .map(([a, b, c]) => `${a}:${b}:${String(c)}`)
+  .pipe(catchAll(() => ok('fallback')))
+
+export const tupled = V.tuple(f1, f2, f3, f4)
+  .map(([a, b]) => `${a}:${b}`)
+  .pipe(orElse(() => ok('fallback')))

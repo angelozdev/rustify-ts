@@ -24,6 +24,7 @@ usage.
     pnpm --filter rustify-ts bench:types
 
 Compiles `bench/types/pipeline.ts` — a 15-step chain over a 10-member error
-union — with `tsc --extendedDiagnostics` and reads `Check time`. The budget is
-2 seconds; the script exits non-zero above it. Report the number on every
-milestone, and report it before simplifying any type when it goes over.
+union, plus an 8-field `V.struct` chain and the array validators — with
+`tsc --extendedDiagnostics` and reads `Check time`. The budget is 2 seconds;
+the script exits non-zero above it. Report the number on every milestone, and
+report it before simplifying any type when it goes over.
