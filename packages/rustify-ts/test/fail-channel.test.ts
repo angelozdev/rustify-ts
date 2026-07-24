@@ -196,6 +196,7 @@ describe('catchAll and orElse', () => {
     const o = fail(notFound('a')).pipe(orElse(spy))
     expect(o._tag).toBe(OK)
     expect(o._v).toBe(9)
+    expect(o._fr).toBeNull()
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
