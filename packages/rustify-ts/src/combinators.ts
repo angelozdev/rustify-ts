@@ -1,7 +1,6 @@
 /**
- * Layer 3 free functions for the happy path and outputs. They only use
- * core's public API (internal `@internal` helpers included) — never touch
- * `_v` directly.
+ * Free functions for the happy path and outputs, built on core's public API
+ * (internal `@internal` helpers included) — never touch `_v` directly.
  */
 import { FAIL, OK, Outcome, __defect, __through, __val, fail } from './core'
 import { toError } from './trace'
@@ -9,9 +8,9 @@ import { toError } from './trace'
 const UNKNOWN = '<unknown>'
 
 /**
- * Side-effect over Ok. On Ok it returns the same instance (I1). On
- * Fail/Defect it passes through unchanged except for an appended `through`
- * frame, exactly like `map`.
+ * Side-effect over Ok. On Ok it returns the same instance, so a healthy
+ * chain allocates nothing extra. On Fail/Defect it passes through unchanged
+ * except for an appended `through` frame, exactly like `map`.
  */
 export function tap<T, E>(
   f: (t: T) => void,
