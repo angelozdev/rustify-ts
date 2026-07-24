@@ -11,7 +11,7 @@ importers:
   packages/rustify-ts:
     devDependencies:
       fast-check:
-        specifier: ^4.9.0
+        specifier: 4.9.0
         version: 4.9.0
       tsup:
         specifier: 8.5.0
