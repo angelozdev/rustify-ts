@@ -238,3 +238,73 @@ export function fail<E>(e: E, site?: string): Outcome<never, E> {
 export function die(cause: unknown, site?: string): Outcome<never, never> {
   return __defect(cause, 'die', site)
 }
+
+/**
+ * Runs `f`. If it throws, the result is a Defect. Never produces a Fail —
+ * `attempt` has no way to classify a thrown cause as a domain error, so
+ * every thrown cause is treated as a bug.
+ */
+export function attempt<T>(f: () => T, site?: string): Outcome<T, never> {
+  try {
+    return ok(f())
+  } catch (cause) {
+    return __defect(cause, 'attempt', site)
+  }
+}
+
+/**
+ * Boundary with code that throws. `classify` decides whether a thrown cause
+ * is a domain failure (Fail) or a bug (die). If `classify` itself throws,
+ * the ORIGINAL cause wins as a Defect — no combinator may ever throw, so a
+ * broken classifier can never hide the failure that triggered it.
+ */
+export function fromThrowable<A extends unknown[], T, E>(
+  f: (...args: A) => T,
+  classify: (cause: unknown) => Outcome<never, E>,
+): (...args: A) => Outcome<T, E> {
+  return (...args) => {
+    let cause: unknown
+    try {
+      return ok(f(...args))
+    } catch (c) {
+      cause = c
+    }
+    try {
+      return classify(cause)
+    } catch {
+      return __defect(cause, 'fromThrowable', undefined)
+    }
+  }
+}
+
+/**
+ * Async counterpart of {@link fromThrowable}: awaits `p`, classifying a
+ * rejection the same way. If `classify` itself throws, the ORIGINAL
+ * rejection reason wins as a Defect.
+ */
+export async function fromPromise<T, E>(
+  p: Promise<T>,
+  classify: (cause: unknown) => Outcome<never, E>,
+): Promise<Outcome<T, E>> {
+  let cause: unknown
+  try {
+    return ok(await p)
+  } catch (c) {
+    cause = c
+  }
+  try {
+    return classify(cause)
+  } catch {
+    return __defect(cause, 'fromPromise', undefined)
+  }
+}
+
+/** Validates the world at runtime: false → Fail. */
+export function ensure<E>(cond: boolean, e: E, site?: string): Outcome<void, E> {
+  return cond ? ok(undefined) : fail(e, site ?? `ensure@${UNKNOWN}`)
+}
+
+/** Validates an assumption your own code makes: false → Defect. */
+export function invariant(cond: boolean, msg: string, site?: string): Outcome<void, never> {
+  return cond ? ok(undefined) : __defect(new Error(msg), 'invariant', site)
+}
