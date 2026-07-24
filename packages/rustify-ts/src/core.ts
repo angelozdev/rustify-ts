@@ -262,6 +262,42 @@ export function __appended(
 
 /**
  * @internal
+ * Builds an Ok whose value was assembled dynamically: the signature of the
+ * caller knows the shape, the code that fills it only sees a plain object.
+ */
+export function __okAs<T>(v: unknown): Outcome<T, never> {
+  return new Outcome<T, never>(OK, v, null)
+}
+
+/**
+ * @internal
+ * Builds a Fail whose error was assembled dynamically, with an `origin` frame
+ * named after the combinator that produced it.
+ */
+export function __failAs<E>(
+  e: unknown,
+  name: string,
+  site: string | undefined,
+): Outcome<never, E> {
+  return new Outcome<never, E>(FAIL, e, __origin(site, name))
+}
+
+/**
+ * @internal
+ * Propagates a Defect out of a combinator whose result type is unrelated to
+ * the outcome the Defect came from. Sound because a Defect carries neither a
+ * value nor an error.
+ */
+export function __defectThrough<T, E>(
+  o: Outcome<unknown, unknown>,
+  name: string,
+  site: string | undefined,
+): Outcome<T, E> {
+  return __through(o, name, site) as Outcome<T, E>
+}
+
+/**
+ * @internal
  * Passes a failed outcome through unchanged. The `never` error keeps the
  * result assignable to any narrowed error union without a cast at the call
  * site.
