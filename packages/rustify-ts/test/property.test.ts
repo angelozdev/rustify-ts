@@ -6,13 +6,17 @@ import {
   OK,
   type Outcome,
   catchAll,
+  catchDefect,
   catchTags,
   die,
   fail,
   filterOrFail,
   ok,
   orElse,
+  refine,
+  sandbox,
   tap,
+  unsandbox,
   V,
 } from '../src/index'
 
@@ -77,6 +81,17 @@ const ops: ReadonlyArray<(o: O) => O> = [
     V.tuple(o, fail({ _tag: 'E' as const }))
       .map(([a]) => a)
       .mapFail(() => ({ _tag: 'E' as const })),
+  (o) => o.pipe(catchDefect(() => fail({ _tag: 'E' as const }))),
+  (o) => o.pipe(catchDefect(throwsOutcome)),
+  (o) => o.pipe(sandbox).pipe(unsandbox),
+  (o) => o.pipe(refine((e) => e._tag === 'E')),
+  (o) => o.pipe(refine(() => false)),
+  (o) =>
+    o.pipe(
+      refine(() => {
+        throw boom
+      }),
+    ),
 ]
 
 const seeds: ReadonlyArray<O> = [ok(1), fail({ _tag: 'E' as const }), die(boom)]
