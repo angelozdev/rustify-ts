@@ -9,7 +9,7 @@
  */
 import type { NodePath, Visitor } from '@babel/traverse'
 import type * as t from '@babel/types'
-import { FREE_SITES, MODULE_NAME } from './targets'
+import { FREE_SITES, METHOD_SITES, MODULE_NAME, PRODUCERS } from './targets'
 
 export type Injection = {
   readonly name: string
@@ -74,12 +74,62 @@ function importedName(raw: AnyPath): string | undefined {
   return undefined
 }
 
+function isThrowableWrapper(path: NodePath<t.Identifier>): boolean {
+  const binding = path.scope.getBinding(path.node.name)
+  if (binding === undefined || !binding.constant || !binding.path.isVariableDeclarator()) return false
+  const init = binding.path.get('init')
+  if (!init.isCallExpression()) return false
+  return importedName(init.get('callee')) === 'fromThrowable'
+}
+
+/**
+ * Whether this expression evaluates to an Outcome minted by rustify-ts.
+ * `.pipe(...)` deliberately breaks the chain: it returns whatever its last
+ * function returns, which may well be a plain array. The cast reaches an
+ * initializer that the types describe as possibly absent, and which the line
+ * above has just proven present.
+ */
+function isOutcome(raw: AnyPath, seen: Set<unknown>): boolean {
+  const path = unwrap(raw)
+  if (path.isCallExpression()) {
+    const callee = unwrap(path.get('callee'))
+    const name = importedName(callee)
+    if (name !== undefined) return PRODUCERS.has(name)
+    const method = propertyName(callee)
+    if (method !== undefined && callee.isMemberExpression()) {
+      return METHOD_SITES[method] !== undefined && isOutcome(callee.get('object'), seen)
+    }
+    return callee.isIdentifier() ? isThrowableWrapper(callee) : false
+  }
+  if (path.isAwaitExpression()) {
+    const argument = unwrap(path.get('argument'))
+    return argument.isCallExpression() && importedName(argument.get('callee')) === 'fromPromise'
+  }
+  if (path.isIdentifier()) {
+    const binding = path.scope.getBinding(path.node.name)
+    if (binding === undefined || !binding.constant || seen.has(binding)) return false
+    const declarator = binding.path
+    if (!declarator.isVariableDeclarator()) return false
+    const init = declarator.get('init')
+    if (init.node === null || init.node === undefined) return false
+    seen.add(binding)
+    return isOutcome(init as AnyPath, seen)
+  }
+  return false
+}
+
 function target(path: NodePath<t.CallExpression>): { name: string; index: number } | undefined {
   const callee = unwrap(path.get('callee'))
   const free = importedName(callee)
-  if (free === undefined) return undefined
-  const index = FREE_SITES[free]
-  return index === undefined ? undefined : { name: free, index }
+  if (free !== undefined) {
+    const index = FREE_SITES[free]
+    return index === undefined ? undefined : { name: free, index }
+  }
+  const method = propertyName(callee)
+  if (method === undefined || !callee.isMemberExpression()) return undefined
+  const index = METHOD_SITES[method]
+  if (index === undefined) return undefined
+  return isOutcome(callee.get('object'), new Set()) ? { name: method, index } : undefined
 }
 
 function anchorLine(path: NodePath<t.CallExpression>): number | undefined {
