@@ -21,6 +21,7 @@ export {
   formatTrace,
   toError,
   type DefectPayload,
+  type SandboxedDefect,
   type Frame,
 } from './trace'
 export { catchDefect, sandbox, unsandbox } from './defect'

@@ -4,7 +4,7 @@
  * at the call site.
  */
 import { DEFECT, FAIL, Outcome, __pass, __recover } from './core'
-import { __isMinted, type DefectPayload } from './trace'
+import { __isMinted, type DefectPayload, type SandboxedDefect } from './trace'
 
 /**
  * Recovers from a Defect. Ok and Fail pass through as the same instance; a
@@ -26,8 +26,8 @@ export function catchDefect<U, E2>(
  * error, so it leaves no frame and a round trip through `unsandbox` restores
  * the original trace. Ok and Fail pass through as the same instance.
  */
-export function sandbox<T, E>(o: Outcome<T, E>): Outcome<T, E | DefectPayload> {
-  return o._tag === DEFECT ? new Outcome<T, E | DefectPayload>(FAIL, o._v, o._fr) : o
+export function sandbox<T, E>(o: Outcome<T, E>): Outcome<T, E | SandboxedDefect> {
+  return o._tag === DEFECT ? new Outcome<T, E | SandboxedDefect>(FAIL, o._v, o._fr) : o
 }
 
 /**
@@ -36,8 +36,8 @@ export function sandbox<T, E>(o: Outcome<T, E>): Outcome<T, E | DefectPayload> {
  * same shape stays a Fail, so only a defect this package produced can be
  * un-sandboxed.
  */
-export function unsandbox<T, E>(o: Outcome<T, E>): Outcome<T, Exclude<E, DefectPayload>> {
+export function unsandbox<T, E>(o: Outcome<T, E>): Outcome<T, Exclude<E, SandboxedDefect>> {
   return o._tag === FAIL && __isMinted(o._v)
-    ? new Outcome<T, Exclude<E, DefectPayload>>(DEFECT, o._v, o._fr)
+    ? new Outcome<T, Exclude<E, SandboxedDefect>>(DEFECT, o._v, o._fr)
     : __pass(o)
 }

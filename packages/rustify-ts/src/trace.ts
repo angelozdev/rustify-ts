@@ -23,8 +23,13 @@ export type DefectPayload = {
  */
 export const __PAYLOAD: unique symbol = Symbol('rustify.defect')
 
-/** @internal */
-export type __Minted = DefectPayload & { readonly [__PAYLOAD]: true }
+/**
+ * A {@link DefectPayload} this package actually minted, not just an object
+ * with the same shape. `sandbox` adds it to the error union and `unsandbox`
+ * narrows it back out, so a hand-built lookalike passed to `unsandbox` stays
+ * a Fail instead of silently becoming a Defect.
+ */
+export type SandboxedDefect = DefectPayload & { readonly [__PAYLOAD]: true }
 
 /** @internal */
 export function __isMinted(v: unknown): boolean {

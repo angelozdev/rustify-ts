@@ -10,7 +10,7 @@ import {
   toError,
   type DefectPayload,
   type Frame,
-  type __Minted,
+  type SandboxedDefect,
 } from './trace'
 
 export const OK = 0 as const
@@ -221,7 +221,7 @@ export function __origin(site: string | undefined, name: string): Frame[] {
  * it has been moved into the typed error channel.
  */
 export function __payload(cause: unknown): DefectPayload {
-  const p: __Minted = {
+  const p: SandboxedDefect = {
     cause,
     get stack() {
       return cause instanceof Error ? cause.stack : undefined
