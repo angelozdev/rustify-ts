@@ -1,0 +1,62 @@
+{
+  "name": "eslint-plugin-rustify",
+  "version": "0.1.0-alpha.0",
+  "description": "ESLint rule that catches an Outcome created and never handled: no-floating-outcome.",
+  "license": "MIT",
+  "author": "Angelo Zambrano",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/angelozdev/rustify-ts.git"
+  },
+  "keywords": [
+    "rustify-ts",
+    "eslint",
+    "eslint-plugin",
+    "typescript-eslint",
+    "must-use",
+    "outcome",
+    "error-handling"
+  ],
+  "peerDependencies": {
+    "eslint": ">=8.57.0",
+    "typescript": ">=4.8.4"
+  },
+  "dependencies": {
+    "@typescript-eslint/utils": "8.65.0",
+    "ts-api-utils": "2.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "@typescript-eslint/parser": "8.65.0",
+    "@typescript-eslint/rule-tester": "8.65.0",
+    "eslint": "10.8.0",
+    "rustify-ts": "workspace:*",
+    "tsup": "8.5.0",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4"
+  }
+}
