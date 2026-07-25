@@ -45,16 +45,20 @@ export function transform(
   const where = displayPath(id, options.root)
   const edited = new MagicString(code)
   let edits = 0
-  traverse(
-    ast,
-    createVisitor((injection) => {
-      edits += 1
-      edited.appendLeft(
-        injection.insertAt,
-        `, ${JSON.stringify(siteOf(where, injection.name, injection.line))}`,
-      )
-    }),
-  )
+  try {
+    traverse(
+      ast,
+      createVisitor((injection) => {
+        edits += 1
+        edited.appendLeft(
+          injection.insertAt,
+          `, ${JSON.stringify(siteOf(where, injection.name, injection.line))}`,
+        )
+      }),
+    )
+  } catch {
+    return null
+  }
   if (edits === 0) return null
   return {
     code: edited.toString(),

@@ -27,13 +27,17 @@ export default function rustifyBabel(api: { types: typeof BabelTypes }): PluginO
         const filename = state.filename
         if (!sites || filename === undefined) return
         const where = displayPath(filename, root ?? state.cwd)
-        path.traverse(
-          createVisitor((injection) => {
-            injection.path.node.arguments.push(
-              api.types.stringLiteral(siteOf(where, injection.name, injection.line)),
-            )
-          }),
-        )
+        try {
+          path.traverse(
+            createVisitor((injection) => {
+              injection.path.node.arguments.push(
+                api.types.stringLiteral(siteOf(where, injection.name, injection.line)),
+              )
+            }),
+          )
+        } catch {
+          return
+        }
       },
     },
   }
