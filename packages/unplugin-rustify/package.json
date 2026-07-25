@@ -9,7 +9,41 @@
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    },
+    "./vite": {
+      "import": { "types": "./dist/vite.d.ts", "default": "./dist/vite.js" },
+      "require": { "types": "./dist/vite.d.cts", "default": "./dist/vite.cjs" }
+    },
+    "./rollup": {
+      "import": { "types": "./dist/rollup.d.ts", "default": "./dist/rollup.js" },
+      "require": { "types": "./dist/rollup.d.cts", "default": "./dist/rollup.cjs" }
+    },
+    "./webpack": {
+      "import": { "types": "./dist/webpack.d.ts", "default": "./dist/webpack.js" },
+      "require": { "types": "./dist/webpack.d.cts", "default": "./dist/webpack.cjs" }
+    },
+    "./esbuild": {
+      "import": { "types": "./dist/esbuild.d.ts", "default": "./dist/esbuild.js" },
+      "require": { "types": "./dist/esbuild.d.cts", "default": "./dist/esbuild.cjs" }
+    },
+    "./babel": {
+      "import": { "types": "./dist/babel.d.ts", "default": "./dist/babel.js" },
+      "require": { "types": "./dist/babel.d.cts", "default": "./dist/babel.cjs" }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
+    "build": "tsup",
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
