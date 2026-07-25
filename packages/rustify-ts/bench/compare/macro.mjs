@@ -1,7 +1,8 @@
 /**
  * Macro-benchmark: one full HTTP handler pass over a mix of inputs that hits
- * success and every failure branch. The equivalence guard runs first, so the
- * three implementations are known to compute the same answers before any timing.
+ * success and every failure branch. Tracing is set first, then the
+ * equivalence guard runs, so whichever mode is actually active for this
+ * process is the one whose outputs get checked before any timing.
  */
 import { bench, do_not_optimize, run, summary } from 'mitata'
 import { disableTracing } from '../../dist/index.js'
@@ -13,9 +14,9 @@ import {
   rustifyHandler,
 } from './handlers.mjs'
 
-assertEquivalent()
-
 if (process.env.RUSTIFY_TRACE === 'off') disableTracing()
+
+assertEquivalent()
 
 const sweep = (handler) => {
   for (const raw of INPUTS) do_not_optimize(handler(raw))

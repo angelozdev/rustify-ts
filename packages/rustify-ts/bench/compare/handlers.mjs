@@ -7,6 +7,7 @@
  */
 import { fail, ok, V } from '../../dist/index.js'
 import { err as nerr, ok as nok } from 'neverthrow'
+import { pathToFileURL } from 'node:url'
 
 export const INPUTS = [
   { id: '1', token: 't', tenant: 'acme' },
@@ -82,7 +83,7 @@ export function assertEquivalent() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   assertEquivalent()
   console.log('handlers equivalent OK')
 }
