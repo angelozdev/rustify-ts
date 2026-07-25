@@ -42,7 +42,7 @@ importers:
         version: 0.30.21
       unplugin:
         specifier: 3.3.0
-        version: 3.3.0(esbuild@0.25.12)(rollup@4.62.2)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0))
+        version: 3.3.0(esbuild@0.28.1)(rollup@4.62.2)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0))
     devDependencies:
       '@babel/core':
         specifier: 7.29.7
@@ -50,6 +50,9 @@ importers:
       '@babel/preset-typescript':
         specifier: 7.29.7
         version: 7.29.7(@babel/core@7.29.7)
+      '@babel/types':
+        specifier: 7.29.7
+        version: 7.29.7
       '@types/babel__core':
         specifier: 7.20.5
         version: 7.20.5
@@ -2141,13 +2144,13 @@ snapshots:
 
   undici-types@6.21.0: {}
 
-  unplugin@3.3.0(esbuild@0.25.12)(rollup@4.62.2)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0)):
+  unplugin@3.3.0(esbuild@0.28.1)(rollup@4.62.2)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0)):
     dependencies:
       '@jridgewell/remapping': 2.3.5
       picomatch: 4.0.5
       webpack-virtual-modules: 0.6.2
     optionalDependencies:
-      esbuild: 0.25.12
+      esbuild: 0.28.1
       rollup: 4.62.2
       vite: 7.3.6(@types/node@22.20.1)(jiti@2.7.0)
 

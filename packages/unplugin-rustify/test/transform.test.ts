@@ -99,7 +99,7 @@ describe('arity guards', () => {
   })
 
   it('skips a call whose arity is unknown because of a spread', () => {
-    const code = ["import { ensure } from 'rustify-ts'", 'const a = ensure(...args)'].join('\n')
+    const code = ["import { fail } from 'rustify-ts'", 'const a = fail(...args)'].join('\n')
     expect(run(code)).toBe(null)
   })
 })
