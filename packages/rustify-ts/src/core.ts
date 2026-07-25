@@ -325,6 +325,14 @@ export function __val<T>(o: Outcome<T, unknown>): T {
   return o._v as T
 }
 
+/**
+ * @internal
+ * Typed access to `_v` in the Fail state, the counterpart of {@link __val}.
+ */
+export function __err<E>(o: Outcome<unknown, E>): E {
+  return o._v as E
+}
+
 /** @internal */
 export function __hasTag(v: unknown, tag: string): boolean {
   return typeof v === 'object' && v !== null && (v as { _tag?: unknown })._tag === tag

@@ -3,7 +3,17 @@
  * architectural decision, so these live as free functions and read verbosely
  * at the call site.
  */
-import { DEFECT, FAIL, Outcome, __pass, __recover } from './core'
+import {
+  DEFECT,
+  FAIL,
+  Outcome,
+  __appended,
+  __defect,
+  __err,
+  __pass,
+  __payload,
+  __recover,
+} from './core'
 import { __isMinted, type DefectPayload, type SandboxedDefect } from './trace'
 
 /**
@@ -36,8 +46,37 @@ export function sandbox<T, E>(o: Outcome<T, E>): Outcome<T, E | SandboxedDefect>
  * same shape stays a Fail, so only a defect this package produced can be
  * un-sandboxed.
  */
-export function unsandbox<T, E>(o: Outcome<T, E>): Outcome<T, Exclude<E, SandboxedDefect>> {
+export function unsandbox<T, E>(o: Outcome<T, E>): Outcome<T, Exclude<E, DefectPayload>> {
   return o._tag === FAIL && __isMinted(o._v)
-    ? new Outcome<T, Exclude<E, SandboxedDefect>>(DEFECT, o._v, o._fr)
+    ? new Outcome<T, Exclude<E, DefectPayload>>(DEFECT, o._v, o._fr)
     : __pass(o)
+}
+
+/**
+ * Escalates a Fail the predicate rejects into a Defect: an error that gets
+ * here and does not hold is a bug, not a domain failure. The escalated Defect
+ * keeps the accumulated trace plus a `through` frame, and its cause is the
+ * rejected error value. A Fail the predicate accepts, an Ok and a Defect all
+ * pass through as the same instance. A predicate that throws yields a Defect
+ * with the thrown cause.
+ */
+export function refine<T, E>(
+  pred: (e: E) => boolean,
+  site?: string,
+): (o: Outcome<T, E>) => Outcome<T, E> {
+  return (o) => {
+    if (o._tag !== FAIL) return o
+    let held: boolean
+    try {
+      held = pred(__err(o))
+    } catch (cause) {
+      return __defect(cause, 'refine', site)
+    }
+    if (held) return o
+    return new Outcome<T, E>(
+      DEFECT,
+      __payload(o._v),
+      __appended(o, 'refine', 'through', site, 'refine'),
+    )
+  }
 }

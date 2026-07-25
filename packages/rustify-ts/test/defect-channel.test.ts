@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFECT, FAIL, OK, type Outcome, die, fail, ok } from '../src/core'
 import { catchAll } from '../src/combinators'
-import { catchDefect, sandbox, unsandbox } from '../src/defect'
+import { catchDefect, refine, sandbox, unsandbox } from '../src/defect'
 import { disableTracing, enableTracing, formatTrace, type DefectPayload } from '../src/trace'
 
 afterEach(() => enableTracing())
@@ -126,5 +126,58 @@ describe('formatTrace headers for the defect channel', () => {
     const d = die({ _tag: 'Weird', x: 1 }, 'die@app.ts:3')
     expect(formatTrace(d).split('\n')[0]).toBe('Defect(Weird { x: 1 })')
     expect(formatTrace(sandbox(d)).split('\n')[0]).toBe('Fail(Defect(Weird { x: 1 }))')
+  })
+})
+
+describe('refine', () => {
+  it('a rejected Fail escalates to a Defect keeping the trace', () => {
+    const o: Outcome<number, NotFound> = fail(notFound('a'), 'fetchDevice@api.ts:41')
+    const r = o.pipe(refine((e) => e.id !== 'a', 'refine@app.ts:2'))
+    expect(r._tag).toBe(DEFECT)
+    expect((r._v as DefectPayload).cause).toEqual({ _tag: 'NotFound', id: 'a' })
+    expect(r._fr).toEqual([
+      { site: 'fetchDevice@api.ts:41', kind: 'origin', note: undefined },
+      { site: 'refine@app.ts:2', kind: 'through', note: 'refine' },
+    ])
+  })
+
+  it('the escalated Defect reads its tag in the trace header', () => {
+    const o: Outcome<number, NotFound> = fail(notFound('a'), 'fetchDevice@api.ts:41')
+    const r = o.pipe(refine(() => false))
+    expect(formatTrace(r).split('\n')[0]).toBe('Defect(NotFound { id: "a" })')
+  })
+
+  it('the escalated Defect is a real one: it can be sandboxed', () => {
+    const o: Outcome<number, NotFound> = fail(notFound('a'))
+    const r = o.pipe(refine(() => false))
+    expect(unsandbox(sandbox(r))._tag).toBe(DEFECT)
+  })
+
+  it('an accepted Fail, an Ok and a Defect pass through as the SAME instance', () => {
+    const f: Outcome<number, NotFound> = fail(notFound('a'))
+    const o: Outcome<number, NotFound> = ok(1)
+    const d: Outcome<number, NotFound> = die(new Error('bug'))
+    expect(f.pipe(refine(() => true))).toBe(f)
+    expect(o.pipe(refine(() => false))).toBe(o)
+    expect(d.pipe(refine(() => false))).toBe(d)
+  })
+
+  it('a predicate that throws becomes a Defect', () => {
+    const f: Outcome<number, NotFound> = fail(notFound('a'))
+    const r = f.pipe(
+      refine(() => {
+        throw new Error('boom')
+      }),
+    )
+    expect(r._tag).toBe(DEFECT)
+    expect(r._fr).toEqual([{ site: 'refine@<unknown>', kind: 'origin', note: undefined }])
+  })
+
+  it('with tracing disabled it still escalates, without frames', () => {
+    disableTracing()
+    const f: Outcome<number, NotFound> = fail(notFound('a'))
+    const r = f.pipe(refine(() => false))
+    expect(r._tag).toBe(DEFECT)
+    expect(r._fr).toEqual([])
   })
 })
