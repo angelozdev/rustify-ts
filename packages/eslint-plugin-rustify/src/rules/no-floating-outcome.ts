@@ -60,11 +60,13 @@ export const noFloatingOutcome = createRule<Options, MessageIds>({
 
         if (!isOutcomeType(type, checker, tsNode)) return
 
-        // The `void` remedy only silences this rule when the expression
-        // isn't already voided and `ignoreVoid` is `true`. Otherwise,
-        // prepending `void` would still be reported on the next lint pass,
-        // so neither the message nor the suggestion should promise it as a
-        // fix.
+        /**
+         * The `void` remedy only silences this rule when the expression
+         * isn't already voided and `ignoreVoid` is `true`. Otherwise,
+         * prepending `void` would still be reported on the next lint pass,
+         * so neither the message nor the suggestion should promise it as a
+         * fix.
+         */
         const voidWouldSilenceRule = !alreadyVoided && options.ignoreVoid
 
         context.report({
