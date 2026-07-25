@@ -21,4 +21,11 @@ describe('resolveOptions', () => {
     const options = resolveOptions({ include })
     expect(options.include).not.toBe(include)
   })
+
+  it('returns fresh arrays on each call when defaults are used', () => {
+    const first = resolveOptions(undefined)
+    const second = resolveOptions(undefined)
+    expect(first.include).not.toBe(second.include)
+    expect(first.exclude).not.toBe(second.exclude)
+  })
 })

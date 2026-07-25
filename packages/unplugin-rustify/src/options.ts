@@ -19,8 +19,8 @@ const DEFAULT_EXCLUDE: Array<string | RegExp> = [/[\\/]node_modules[\\/]/]
 
 export function resolveOptions(options: Options | undefined): ResolvedOptions {
   return {
-    include: options?.include === undefined ? DEFAULT_INCLUDE : [...options.include],
-    exclude: options?.exclude === undefined ? DEFAULT_EXCLUDE : [...options.exclude],
+    include: [...(options?.include ?? DEFAULT_INCLUDE)],
+    exclude: [...(options?.exclude ?? DEFAULT_EXCLUDE)],
     sites: options?.sites ?? true,
     root: options?.root ?? process.cwd(),
   }
