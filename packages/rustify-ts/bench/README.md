@@ -112,9 +112,10 @@ of magnitude — but it does not bring the fail path down into neverthrow's
 territory.
 
 Reading `core.ts` and `trace.ts` directly now confirms there is no
-allocation left ungated by `disableTracing()` on the Fail path: `__through`,
-`catchTag`, and `__recover` all skip the extra frame work once tracing is
-off. That confirmation required one real fix along the way: `catchTag` and
+allocation left ungated by `disableTracing()` on the combinators this
+benchmark suite exercises: `__through`, `catchTag`, and `__recover` all skip
+the extra frame work once tracing is off. That confirmation required one
+real fix along the way: `catchTag` and
 `catchTags` each built their `note` string (`` `catchTag('${tag}')` ``)
 unconditionally on every call, even though `__recover` only reads that note
 when tracing is on. That allocation was ungated by `disableTracing()` and
