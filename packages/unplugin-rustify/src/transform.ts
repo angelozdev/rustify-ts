@@ -17,10 +17,13 @@ export type TransformOutput = {
   readonly map: string
 }
 
-function parserPlugins(file: string): ParserPlugin[] {
-  if (file.endsWith('.tsx')) return ['typescript', 'jsx']
-  if (/\.[cm]?ts$/.test(file)) return ['typescript']
-  return ['jsx']
+function parserPlugins(id: string): ParserPlugin[] {
+  const file = cleanId(id)
+  const isTsx = file.endsWith('.tsx') || /[?&]lang\.tsx(?:&|$)/.test(id)
+  const isTs = isTsx || /\.[cm]?ts$/.test(file) || /[?&]lang\.ts(?:&|$)/.test(id)
+  if (isTsx) return ['typescript', 'jsx', 'decorators-legacy']
+  if (isTs) return ['typescript', 'decorators-legacy']
+  return ['jsx', 'decorators-legacy']
 }
 
 /**
@@ -38,7 +41,7 @@ export function transform(
   const file = cleanId(id)
   let ast
   try {
-    ast = parse(code, { sourceType: 'module', plugins: parserPlugins(file) })
+    ast = parse(code, { sourceType: 'module', plugins: parserPlugins(id) })
   } catch {
     return null
   }

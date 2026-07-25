@@ -146,3 +146,24 @@ describe('output', () => {
     expect(map).toMatchObject({ version: 3, sources: ['/repo/src/app.ts'] })
   })
 })
+
+describe('parser coverage', () => {
+  it('parses a class using a legacy decorator', () => {
+    const code = [
+      "import { fail } from 'rustify-ts'",
+      '@Injectable()',
+      'class Service {',
+      '  run(e) {',
+      '    return fail(e)',
+      '  }',
+      '}',
+    ].join('\n')
+    expect(run(code)).toContain('fail(e, "fail@src/app.ts:5")')
+  })
+
+  it('parses the TypeScript script block of a Vite Vue SFC through the raw id', () => {
+    const code = ["import { fail } from 'rustify-ts'", 'const a: unknown = fail(e)'].join('\n')
+    const out = run(code, '/repo/src/App.vue?vue&type=script&lang.ts')
+    expect(out).toContain('"fail@src/App.vue:2"')
+  })
+})
