@@ -10,11 +10,14 @@ const root = resolve(here, 'fixtures/app')
 
 const STUB_ID = '\0rustify-stub'
 
-type BuildOutput = { readonly output: ReadonlyArray<{ readonly code: string }> }
+function hasOutput(value: unknown): value is { output: ReadonlyArray<{ code: string }> } {
+  return typeof value === 'object' && value !== null && 'output' in value
+}
 
 const firstChunk = (result: Awaited<ReturnType<typeof build>>): string => {
   const first = Array.isArray(result) ? result[0] : result
-  const chunk = (first as unknown as BuildOutput).output[0]
+  if (!hasOutput(first)) throw new Error('vite produced no output')
+  const chunk = first.output[0]
   if (chunk === undefined) throw new Error('vite produced no output')
   return chunk.code
 }
