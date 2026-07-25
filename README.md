@@ -4,6 +4,7 @@
 | ------------------------------------------------- | ----------------------------------------------------------------------- |
 | [`rustify-ts`](./packages/rustify-ts)             | The core: `Outcome<T, E>` with Ok / Fail / Defect and causal traces.    |
 | [`unplugin-rustify`](./packages/unplugin-rustify) | Optional build plugin: turns `<unknown>` trace frames into `file:line`. |
+| [`eslint-plugin-rustify`](./packages/eslint-plugin-rustify) | `#[must_use]` for `Outcome`: catches a created-and-never-handled Outcome at lint time. |
 
 Development:
 
