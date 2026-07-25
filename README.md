@@ -1,9 +1,9 @@
 # rustify-ts — monorepo
 
-| Package                                        | What it is                                                          |
-| ---------------------------------------------- | ------------------------------------------------------------------- |
-| [`rustify-ts`](./packages/rustify-ts)          | The core: `Outcome<T, E>` with Ok / Fail / Defect and causal traces. |
-| `unplugin-rustify`                             | Build plugin injecting call-site locations into traces. Not started. |
+| Package                                           | What it is                                                              |
+| ------------------------------------------------- | ----------------------------------------------------------------------- |
+| [`rustify-ts`](./packages/rustify-ts)             | The core: `Outcome<T, E>` with Ok / Fail / Defect and causal traces.    |
+| [`unplugin-rustify`](./packages/unplugin-rustify) | Optional build plugin: turns `<unknown>` trace frames into `file:line`. |
 
 Development:
 
