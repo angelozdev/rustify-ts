@@ -46,9 +46,9 @@ export function sandbox<T, E>(o: Outcome<T, E>): Outcome<T, E | SandboxedDefect>
  * same shape stays a Fail, so only a defect this package produced can be
  * un-sandboxed.
  */
-export function unsandbox<T, E>(o: Outcome<T, E>): Outcome<T, Exclude<E, DefectPayload>> {
+export function unsandbox<T, E>(o: Outcome<T, E>): Outcome<T, Exclude<E, SandboxedDefect>> {
   return o._tag === FAIL && __isMinted(o._v)
-    ? new Outcome<T, Exclude<E, DefectPayload>>(DEFECT, o._v, o._fr)
+    ? new Outcome<T, Exclude<E, SandboxedDefect>>(DEFECT, o._v, o._fr)
     : __pass(o)
 }
 
