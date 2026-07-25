@@ -1,0 +1,49 @@
+{
+  "name": "unplugin-rustify",
+  "version": "0.1.0-alpha.0",
+  "description": "Build-time site injection for rustify-ts traces: Vite, Rollup, webpack, esbuild, rspack and Metro.",
+  "license": "MIT",
+  "author": "Angelo Zambrano",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/angelozdev/rustify-ts.git"
+  },
+  "keywords": [
+    "rustify-ts",
+    "unplugin",
+    "vite",
+    "rollup",
+    "webpack",
+    "metro",
+    "babel",
+    "error-handling"
+  ],
+  "dependencies": {
+    "@babel/parser": "7.29.7",
+    "@babel/traverse": "7.29.7",
+    "magic-string": "0.30.21",
+    "unplugin": "3.3.0"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-typescript": "7.29.7",
+    "@types/babel__core": "7.20.5",
+    "@types/babel__traverse": "7.28.0",
+    "@types/node": "22.20.1",
+    "rollup": "4.62.2",
+    "tsup": "8.5.0",
+    "typescript": "5.9.2",
+    "vite": "7.3.6",
+    "vitest": "3.2.4"
+  }
+}
