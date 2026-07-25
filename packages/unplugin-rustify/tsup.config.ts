@@ -7,6 +7,8 @@ export default defineConfig({
     'src/rollup.ts',
     'src/webpack.ts',
     'src/esbuild.ts',
+    'src/rspack.ts',
+    'src/farm.ts',
     'src/babel.ts',
   ],
   format: ['esm', 'cjs'],

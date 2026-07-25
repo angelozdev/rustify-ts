@@ -57,6 +57,20 @@ const rustify = require('unplugin-rustify/esbuild')
 require('esbuild').build({ plugins: [rustify()] })
 ```
 
+```js
+// rspack.config.js
+const rustify = require('unplugin-rustify/rspack')
+
+module.exports = { plugins: [rustify()] }
+```
+
+```js
+// farm.config.js
+import rustify from 'unplugin-rustify/farm'
+
+export default { plugins: [rustify()] }
+```
+
 ### React Native / Metro
 
 Metro transforms with Babel rather than a bundler plugin, so it takes the Babel
