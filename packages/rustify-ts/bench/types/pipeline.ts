@@ -1,5 +1,6 @@
 import { type Outcome, fail, ok } from '../../src/core'
 import { catchAll, catchTags, filterOrFail, orElse, tap } from '../../src/combinators'
+import { catchDefect, refine, sandbox, unsandbox } from '../../src/defect'
 import { V } from '../../src/validation'
 
 type E01 = { _tag: 'Invalid'; fields: Record<string, unknown> }
@@ -104,3 +105,16 @@ export const collected = V.all([f1, f2, f3, f4, f5, f6, f7, f8])
 export const tupled = V.tuple(f1, f2, f3, f4)
   .map(([a, b]) => `${a}:${b}`)
   .pipe(orElse(() => ok('fallback')))
+
+declare const risky: Outcome<{ id: string; n: number }, Err>
+
+export const guarded = risky
+  .pipe(refine((e) => e._tag !== 'Network'))
+  .pipe(catchDefect((d) => fail({ _tag: 'Unavailable' as const, region: String(d.cause) })))
+  .map((v) => ({ ...v, guarded: true }))
+
+export const boxed = unsandbox(
+  sandbox(risky)
+    .mapFail((e) => e)
+    .catchTag('Timeout', () => ok({ id: 'x', n: 0 })),
+)
