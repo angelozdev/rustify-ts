@@ -151,7 +151,7 @@ export class Outcome<T, E> {
     site?: string,
   ): Outcome<T | U, Exclude<E, { readonly _tag: K }> | E2> {
     if (this._tag !== FAIL || !__hasTag(this._v, tag)) return __pass(this)
-    return __recover(this, h, 'catchTag', site, `catchTag('${tag}')`)
+    return __recover(this, h, 'catchTag', site, __isTracing() ? `catchTag('${tag}')` : undefined)
   }
 
   /**
@@ -471,5 +471,5 @@ export function __catchTags<T, U, E2>(
   if (tag === undefined || !Object.hasOwn(handlers, tag)) return __pass(o)
   const h = (handlers as Record<string, (e: never) => Outcome<U, E2>>)[tag]!
   if (typeof h !== 'function') return __pass(o)
-  return __recover(o, h, 'catchTags', site, `catchTags('${tag}')`)
+  return __recover(o, h, 'catchTags', site, __isTracing() ? `catchTags('${tag}')` : undefined)
 }
