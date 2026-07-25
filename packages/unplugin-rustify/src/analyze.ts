@@ -20,6 +20,8 @@ export type Injection = {
 
 type AnyPath = NodePath<t.Node>
 
+const IGNORE = '@rustify-ignore'
+
 /**
  * Sheds the wrappers that carry no runtime meaning — `as`, `satisfies`, `!` and
  * parentheses — so `(ok(1) as Outcome<number, never>).map(f)` reads like
@@ -120,6 +122,21 @@ function isOutcome(raw: AnyPath, seen: Set<unknown>): boolean {
   return false
 }
 
+function hasIgnore(comments: ReadonlyArray<t.Comment> | null | undefined): boolean {
+  return comments !== null && comments !== undefined && comments.some((c) => c.value.includes(IGNORE))
+}
+
+/**
+ * The marker is honoured where a reader would expect it: right before the call,
+ * or before the statement holding it. A comment in the middle of a chain is not
+ * supported, because which node Babel attaches it to depends on the formatting.
+ */
+function isIgnored(path: NodePath<t.CallExpression>): boolean {
+  if (hasIgnore(path.node.leadingComments)) return true
+  const statement = path.getStatementParent()
+  return statement !== null && hasIgnore(statement.node.leadingComments)
+}
+
 function target(path: NodePath<t.CallExpression>): { name: string; index: number } | undefined {
   const callee = unwrap(path.get('callee'))
   const free = importedName(callee)
@@ -156,6 +173,7 @@ export function createVisitor(report: (injection: Injection) => void): Visitor {
       const args = path.node.arguments
       if (args.length !== found.index) return
       if (args.some((argument) => argument.type === 'SpreadElement')) return
+      if (isIgnored(path)) return
       const insertAt = args[args.length - 1]?.end
       const line = anchorLine(path)
       if (insertAt === null || insertAt === undefined || line === undefined) return
