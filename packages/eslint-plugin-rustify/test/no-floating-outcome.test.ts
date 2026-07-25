@@ -179,5 +179,18 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
       options: [{ ignoreVoid: false }],
       errors: [{ messageId: 'floatingOutcome' }],
     },
+    {
+      code: `
+        import { ok } from 'rustify-ts'
+        ok(1)
+      `,
+      options: [{ ignoreVoid: false }],
+      errors: [
+        {
+          messageId: 'floatingOutcomeIgnoreVoidFalse',
+          suggestions: [],
+        },
+      ],
+    },
   ],
 })

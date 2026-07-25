@@ -7,7 +7,10 @@ const createRule = ESLintUtils.RuleCreator(
 )
 
 type Options = [{ ignoreVoid: boolean }]
-type MessageIds = 'floatingOutcome' | 'voidSuggestion'
+type MessageIds =
+  | 'floatingOutcome'
+  | 'floatingOutcomeIgnoreVoidFalse'
+  | 'voidSuggestion'
 
 export const noFloatingOutcome = createRule<Options, MessageIds>({
   name: 'no-floating-outcome',
@@ -21,6 +24,8 @@ export const noFloatingOutcome = createRule<Options, MessageIds>({
     messages: {
       floatingOutcome:
         'This Outcome is not handled. A dropped Outcome silently discards its Fail or Defect. Consume it (.match / .matchAll / return / assign) or mark it ignored with `void`.',
+      floatingOutcomeIgnoreVoidFalse:
+        'This Outcome is not handled. A dropped Outcome silently discards its Fail or Defect. Consume it (.match / .matchAll / return / assign).',
       voidSuggestion: 'Prepend `void` to explicitly ignore this Outcome',
     },
     schema: [
@@ -55,17 +60,27 @@ export const noFloatingOutcome = createRule<Options, MessageIds>({
 
         if (!isOutcomeType(type, checker, tsNode)) return
 
+        // The `void` remedy only silences this rule when the expression
+        // isn't already voided and `ignoreVoid` is `true`. Otherwise,
+        // prepending `void` would still be reported on the next lint pass,
+        // so neither the message nor the suggestion should promise it as a
+        // fix.
+        const voidWouldSilenceRule = !alreadyVoided && options.ignoreVoid
+
         context.report({
           node: target,
-          messageId: 'floatingOutcome',
-          suggest: alreadyVoided
-            ? []
-            : [
+          messageId:
+            voidWouldSilenceRule || alreadyVoided
+              ? 'floatingOutcome'
+              : 'floatingOutcomeIgnoreVoidFalse',
+          suggest: voidWouldSilenceRule
+            ? [
                 {
                   messageId: 'voidSuggestion',
                   fix: (fixer) => fixer.insertTextBefore(original, 'void '),
                 },
-              ],
+              ]
+            : [],
         })
       },
     }
