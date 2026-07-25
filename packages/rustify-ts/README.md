@@ -136,7 +136,7 @@ never swallows a bug. Use `.matchAll` when you want to handle all three.
 ## Facts
 
 - ESM only, zero runtime dependencies, under 3 kB min+gzip (gated in CI).
-- Node >= 18. TypeScript strict, no `any` in any public input or output.
+- Node >= 20. TypeScript strict, no `any` in any public input or output.
 - One runtime class for the three states, so there is one hidden class to
   optimize instead of three.
 
