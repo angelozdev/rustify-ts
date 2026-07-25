@@ -14,10 +14,20 @@ The scavenges from the loop correspond only to the newly created Outcome
 instances (unavoidable); there should be no growing Mark-Compact or old-space
 usage.
 
-## I4 — a single hidden class (arrives with slice 4)
+## I4 — a single hidden class
 
-    node --trace-deopt over a mixed-state workload. Pending until all three
-    channels are complete.
+    pnpm --filter rustify-ts bench:invariants
+    pnpm --filter rustify-ts bench:i4
+
+Expected: `I4 OK`, 13 outcome shapes compared with none differing, and the
+three defect payloads sharing one shape.
+
+The hard gate is `%HaveSameMap` under `--allow-natives-syntax`, not the
+`--trace-deopt` output: a control with three separate classes read in a hot
+loop emits no `wrong map` deopt at all, because V8 turns the inline cache
+megamorphic without deoptimizing. The printed deopt table is a diagnostic, and
+only reasons that mean a shape assumption broke (`wrong map`, `wrong call
+target`, `wrong instance type`, `wrong name`) fail the run.
 
 ## Type-checking budget
 
