@@ -77,6 +77,7 @@ function importedName(raw: AnyPath): string | undefined {
 function isThrowableWrapper(path: NodePath<t.Identifier>): boolean {
   const binding = path.scope.getBinding(path.node.name)
   if (binding === undefined || !binding.constant || !binding.path.isVariableDeclarator()) return false
+  if (!binding.path.get('id').isIdentifier()) return false
   const init = binding.path.get('init')
   if (!init.isCallExpression()) return false
   return importedName(init.get('callee')) === 'fromThrowable'
@@ -97,7 +98,7 @@ function isOutcome(raw: AnyPath, seen: Set<unknown>): boolean {
     if (name !== undefined) return PRODUCERS.has(name)
     const method = propertyName(callee)
     if (method !== undefined && callee.isMemberExpression()) {
-      return METHOD_SITES[method] !== undefined && isOutcome(callee.get('object'), seen)
+      return Object.hasOwn(METHOD_SITES, method) && isOutcome(callee.get('object'), seen)
     }
     return callee.isIdentifier() ? isThrowableWrapper(callee) : false
   }
@@ -110,6 +111,7 @@ function isOutcome(raw: AnyPath, seen: Set<unknown>): boolean {
     if (binding === undefined || !binding.constant || seen.has(binding)) return false
     const declarator = binding.path
     if (!declarator.isVariableDeclarator()) return false
+    if (!declarator.get('id').isIdentifier()) return false
     const init = declarator.get('init')
     if (init.node === null || init.node === undefined) return false
     seen.add(binding)
@@ -122,11 +124,13 @@ function target(path: NodePath<t.CallExpression>): { name: string; index: number
   const callee = unwrap(path.get('callee'))
   const free = importedName(callee)
   if (free !== undefined) {
+    if (!Object.hasOwn(FREE_SITES, free)) return undefined
     const index = FREE_SITES[free]
     return index === undefined ? undefined : { name: free, index }
   }
   const method = propertyName(callee)
   if (method === undefined || !callee.isMemberExpression()) return undefined
+  if (!Object.hasOwn(METHOD_SITES, method)) return undefined
   const index = METHOD_SITES[method]
   if (index === undefined) return undefined
   return isOutcome(callee.get('object'), new Set()) ? { name: method, index } : undefined

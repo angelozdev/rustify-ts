@@ -115,4 +115,39 @@ describe('receivers it must never touch', () => {
     ].join('\n')
     expect(run(code)).toBe(null)
   })
+
+  it('does not treat a property pulled out of an awaited fromPromise as the Outcome itself', () => {
+    const code = [
+      "import { fromPromise } from 'rustify-ts'",
+      'export async function load(p) {',
+      '  const { rows } = await fromPromise(p, classify)',
+      '  return rows.map(f)',
+      '}',
+    ].join('\n')
+    expect(run(code)).toBe(null)
+  })
+
+  it('does not treat an array-destructured binding as the Outcome itself', () => {
+    const code = ["import { ok } from 'rustify-ts'", 'const [r] = ok(1)', 'const y = r.map(f)'].join('\n')
+    expect(run(code)).toBe(null)
+  })
+
+  it('does not treat a renamed destructured key as the Outcome itself', () => {
+    const code = ["import { ok } from 'rustify-ts'", 'const { a: xs } = ok(1)', 'const y = xs.map(f)'].join('\n')
+    expect(run(code)).toBe(null)
+  })
+
+  it('does not treat a property destructured out of a fromThrowable call as the wrapper itself', () => {
+    const code = [
+      "import { fromThrowable } from 'rustify-ts'",
+      'const { classify: safe } = fromThrowable(fn, classify)',
+      'const r = safe(1).map(f)',
+    ].join('\n')
+    expect(run(code)).toBe(null)
+  })
+
+  it('does not resolve a method through an inherited Object.prototype key', () => {
+    const code = ["import { ok } from 'rustify-ts'", 'const r = ok(1).toString().map(f)'].join('\n')
+    expect(run(code)).toBe(null)
+  })
 })
