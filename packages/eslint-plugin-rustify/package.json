@@ -23,7 +23,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -55,7 +55,7 @@
     "@typescript-eslint/rule-tester": "8.65.0",
     "eslint": "10.8.0",
     "rustify-ts": "workspace:*",
-    "tsup": "8.5.0",
+    "tsdown": "0.22.14",
     "typescript": "5.9.2",
     "vitest": "3.2.4"
   }

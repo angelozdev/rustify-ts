@@ -6,6 +6,8 @@ on:
   pull_request:
 
 jobs:
+  # tsc and vitest run against src, so they cover every Node version the
+  # published packages support.
   check:
     runs-on: ubuntu-latest
     strategy:
@@ -22,9 +24,28 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -r build
       - run: pnpm -r lint
       - run: pnpm -r test
+
+  # tsdown requires Node ^22.18.0 || >=24.11.0, so the build matrix drops 20.
+  # The emitted bundles stay compatible with each package's own engines field.
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
 
   size:
     runs-on: ubuntu-latest

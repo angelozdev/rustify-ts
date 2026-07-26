@@ -22,15 +22,15 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
-    "size": "tsup && size-limit",
+    "build": "tsdown",
+    "size": "tsdown && size-limit",
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench:invariants": "tsup && node --expose-gc bench/invariants/i1-happy-alloc.mjs",
-    "bench:i4": "tsup && node bench/invariants/i4-check.mjs",
+    "bench:invariants": "tsdown && node --expose-gc bench/invariants/i1-happy-alloc.mjs",
+    "bench:i4": "tsdown && node bench/invariants/i4-check.mjs",
     "bench:types": "node bench/types/check-time.mjs",
-    "bench:compare": "tsup && node bench/compare/run.mjs",
+    "bench:compare": "tsdown && node bench/compare/run.mjs",
     "bench:all": "pnpm bench:invariants && pnpm bench:i4 && pnpm bench:types && pnpm bench:compare"
   },
   "repository": {
@@ -52,7 +52,7 @@
     "mitata": "1.0.34",
     "neverthrow": "8.2.0",
     "size-limit": "11.2.0",
-    "tsup": "8.5.0",
+    "tsdown": "0.22.14",
     "typescript": "5.9.2",
     "vitest": "3.2.4"
   }

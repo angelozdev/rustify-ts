@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsup'
+import { defineConfig } from 'tsdown'
 
 export default defineConfig({
   entry: [
@@ -12,7 +12,9 @@ export default defineConfig({
     'src/babel.ts',
   ],
   format: ['esm', 'cjs'],
-  dts: true,
+  fixedExtension: false,
+  dts: { sourcemap: false },
+  deps: { dts: { neverBundle: true } },
   sourcemap: true,
   clean: true,
   treeshake: true,
