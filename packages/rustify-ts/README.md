@@ -140,6 +140,29 @@ never swallows a bug. Use `.matchAll` when you want to handle all three.
 - One runtime class for the three states, so there is one hidden class to
   optimize instead of three.
 
+## Migrating from 1.x
+
+v2 shares the name with `1.x` and nothing else. There is no codemod and no
+compatibility layer — `1.x` stays installable as `rustify-ts@1`.
+
+| `1.x` | v2 |
+| --- | --- |
+| `Result<T, E>` | `Outcome<T, E>`, plus a third `Defect` state |
+| `err(e)` | `fail(e)` |
+| `ok(v)` | `ok(v)` — unchanged |
+| `flatMap` | `andThen` |
+| `mapError` | `mapFail` |
+| `unwrapOr(d)` | `res.pipe(unwrapOr(d))` — now a free function |
+| `unwrap` / `expect` | `unwrapOrThrow`, or `match` / `matchAll` |
+| `Option<T>`, `some`, `none` | **removed, no replacement** |
+
+The rest of `1.x`'s prototype (`zip`, `xor`, `transpose`, `okOr`, `toNullable`,
+`unwrapErr`, …) is gone. See [CHANGELOG.md](./CHANGELOG.md) for the full list.
+
+Two more breaks that are easy to miss: v2 is **ESM only** (`1.x` shipped CJS
+too, so a CJS consumer now needs a dynamic `import()`), and the engine floor
+moved from Node `>=14` to Node `>=20`.
+
 ## License
 
 MIT

@@ -67,9 +67,11 @@ Full API, accumulating validation and the bug lane: **[packages/rustify-ts](./pa
 
 ## Status
 
-This branch is the v2 line (`rustify-ts@2.0.0-alpha.0`), a rewrite that is not
-published yet — npm still serves `1.x`. v2 is ESM only; the `1.x` CJS build is
-gone.
+`rustify-ts@2` is a rewrite and a hard break from `1.x`: `Result` and `Option`
+are gone, replaced by `Outcome`, and the package is now ESM only. `1.x` stays
+installable as `rustify-ts@1`. See the
+[migration table](./packages/rustify-ts/README.md#migrating-from-1x) and the
+[changelog](./packages/rustify-ts/CHANGELOG.md).
 
 Node `>=20`.
 

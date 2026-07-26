@@ -1,6 +1,6 @@
 {
   "name": "rustify-ts",
-  "version": "2.0.0-alpha.0",
+  "version": "2.0.0",
   "description": "Typed error handling for TypeScript: honest types AND honest runtime. Ok / Fail / Defect with causal traces.",
   "license": "MIT",
   "author": "Angelo Zambrano",
@@ -19,6 +19,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
@@ -35,7 +36,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/angelozdev/rustify-ts.git"
+    "url": "git+https://github.com/angelozdev/rustify-ts.git",
+    "directory": "packages/rustify-ts"
+  },
+  "homepage": "https://github.com/angelozdev/rustify-ts/tree/main/packages/rustify-ts#readme",
+  "bugs": {
+    "url": "https://github.com/angelozdev/rustify-ts/issues"
   },
   "keywords": [
     "error-handling",

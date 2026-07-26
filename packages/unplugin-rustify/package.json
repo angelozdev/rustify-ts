@@ -1,6 +1,6 @@
 {
   "name": "unplugin-rustify",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0",
   "description": "Build-time site injection for rustify-ts traces: Vite, Rollup, webpack, esbuild, rspack and Metro.",
   "license": "MIT",
   "author": "Angelo Zambrano",
@@ -58,7 +58,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/angelozdev/rustify-ts.git"
+    "url": "git+https://github.com/angelozdev/rustify-ts.git",
+    "directory": "packages/unplugin-rustify"
+  },
+  "homepage": "https://github.com/angelozdev/rustify-ts/tree/main/packages/unplugin-rustify#readme",
+  "bugs": {
+    "url": "https://github.com/angelozdev/rustify-ts/issues"
   },
   "keywords": [
     "rustify-ts",
