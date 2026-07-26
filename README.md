@@ -9,9 +9,9 @@
 Development:
 
     pnpm install
-    pnpm test          # unit + type tests across the workspace
-    pnpm lint          # tsc --noEmit
     pnpm build
+    pnpm lint          # tsc --noEmit
+    pnpm test          # unit + type tests across the workspace
 
 Benchmarks (manual, not a PR gate):
 

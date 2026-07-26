@@ -55,6 +55,11 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
       function make(x: number): Outcome<number> { return new Outcome(x) }
       make(1)
     `,
+    `
+      import { ok, Outcome } from 'rustify-ts'
+      let r: Outcome<number, never>
+      r = ok(1)
+    `,
   ],
   invalid: [
     {
@@ -70,7 +75,7 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
               messageId: 'voidSuggestion',
               output: `
         import { ok } from 'rustify-ts'
-        void ok(1)
+        void (ok(1))
       `,
             },
           ],
@@ -92,7 +97,7 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
               output: `
         import { ok, Outcome } from 'rustify-ts'
         function syncDevice(x: number): Outcome<number, never> { return ok(x) }
-        void syncDevice(1)
+        void (syncDevice(1))
       `,
             },
           ],
@@ -116,7 +121,7 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
         import { ok, Outcome } from 'rustify-ts'
         function syncDevice(x: number): Outcome<number, never> { return ok(x) }
         function mapIt(o: Outcome<number, never>): Outcome<number, never> { return o }
-        void mapIt(syncDevice(1))
+        void (mapIt(syncDevice(1)))
       `,
             },
           ],
@@ -138,7 +143,7 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
               output: `
         import { fromPromise } from 'rustify-ts'
         declare const p: Promise<number>
-        void fromPromise(p, (e) => e)
+        void (fromPromise(p, (e) => e))
       `,
             },
           ],
@@ -163,7 +168,7 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
         import { fromPromise } from 'rustify-ts'
         declare const p: Promise<number>
         async function main() {
-          void await fromPromise(p, (e) => e)
+          void (await fromPromise(p, (e) => e))
         }
       `,
             },
@@ -177,7 +182,7 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
         void ok(1)
       `,
       options: [{ ignoreVoid: false }],
-      errors: [{ messageId: 'floatingOutcome' }],
+      errors: [{ messageId: 'floatingOutcomeIgnoreVoidFalse' }],
     },
     {
       code: `
@@ -189,6 +194,50 @@ ruleTester.run('no-floating-outcome', noFloatingOutcome, {
         {
           messageId: 'floatingOutcomeIgnoreVoidFalse',
           suggestions: [],
+        },
+      ],
+    },
+    {
+      code: `
+        import { ok, fail } from 'rustify-ts'
+        declare const c: boolean
+        c ? ok(1) : fail(2)
+      `,
+      errors: [
+        {
+          messageId: 'floatingOutcome',
+          suggestions: [
+            {
+              messageId: 'voidSuggestion',
+              output: `
+        import { ok, fail } from 'rustify-ts'
+        declare const c: boolean
+        void (c ? ok(1) : fail(2))
+      `,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      code: `
+        import { ok } from 'rustify-ts'
+        declare const c: boolean
+        c && ok(1)
+      `,
+      errors: [
+        {
+          messageId: 'floatingOutcome',
+          suggestions: [
+            {
+              messageId: 'voidSuggestion',
+              output: `
+        import { ok } from 'rustify-ts'
+        declare const c: boolean
+        void (c && ok(1))
+      `,
+            },
+          ],
         },
       ],
     },

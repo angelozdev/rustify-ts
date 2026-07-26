@@ -1,4 +1,4 @@
-import { ESLintUtils } from '@typescript-eslint/utils'
+import { ESLintUtils, TSESTree } from '@typescript-eslint/utils'
 import { isOutcomeType } from '../is-outcome-type'
 
 const createRule = ESLintUtils.RuleCreator(
@@ -45,8 +45,10 @@ export const noFloatingOutcome = createRule<Options, MessageIds>({
 
     return {
       ExpressionStatement(node) {
+        if (node.expression.type === 'AssignmentExpression') return
+
         const original = node.expression
-        let target = original
+        let target: TSESTree.Expression = original
         let alreadyVoided = false
 
         if (target.type === 'UnaryExpression' && target.operator === 'void') {
@@ -71,15 +73,17 @@ export const noFloatingOutcome = createRule<Options, MessageIds>({
 
         context.report({
           node: target,
-          messageId:
-            voidWouldSilenceRule || alreadyVoided
-              ? 'floatingOutcome'
-              : 'floatingOutcomeIgnoreVoidFalse',
+          messageId: voidWouldSilenceRule
+            ? 'floatingOutcome'
+            : 'floatingOutcomeIgnoreVoidFalse',
           suggest: voidWouldSilenceRule
             ? [
                 {
                   messageId: 'voidSuggestion',
-                  fix: (fixer) => fixer.insertTextBefore(original, 'void '),
+                  fix: (fixer) => [
+                    fixer.insertTextBefore(original, 'void ('),
+                    fixer.insertTextAfter(original, ')'),
+                  ],
                 },
               ]
             : [],
