@@ -1,41 +1,60 @@
 name: release
 
-# Triggered by a tag shaped `<package-name>@<version>`, e.g. `rustify-ts@2.0.0`.
-# The tag is the source of truth: the job resolves it to a directory under
-# packages/, refuses to run if that package.json disagrees about the version,
-# runs the same gates as CI, and only then publishes.
 on:
   push:
     tags:
       - '*@*'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to rehearse
+        required: true
+        type: choice
+        options:
+          - rustify-ts
+          - unplugin-rustify
+          - eslint-plugin-rustify
+      probe_write:
+        description: >-
+          Also prove the token may write, not just authenticate. Adds and then
+          removes a throwaway dist-tag on the already-published version. This
+          does touch the public registry.
+        type: boolean
+        default: false
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.ref }}-${{ inputs.package }}
   cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # create the GitHub Release
-      id-token: write # npm provenance
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
-      # Resolves the tag to a package directory and fails loudly on the two
-      # mistakes a manual publish makes silently: a tag that names no package,
-      # and a tag whose version drifted from the manifest.
       - id: pkg
         env:
           TAG: ${{ github.ref_name }}
+          INPUT_PACKAGE: ${{ inputs.package }}
+          DRY: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           node -e '
             const fs = require("fs")
-            const tag = process.env.TAG
-            const at = tag.lastIndexOf("@")
-            if (at < 1) throw new Error(`tag "${tag}" is not <package-name>@<version>`)
-            const name = tag.slice(0, at)
-            const version = tag.slice(at + 1)
+            const dry = process.env.DRY === "true"
+
+            let name, version
+            if (dry) {
+              name = process.env.INPUT_PACKAGE
+            } else {
+              const tag = process.env.TAG
+              const at = tag.lastIndexOf("@")
+              if (at < 1) throw new Error(`tag "${tag}" is not <package-name>@<version>`)
+              name = tag.slice(0, at)
+              version = tag.slice(at + 1)
+            }
 
             const dir = fs.readdirSync("packages").find((d) => {
               try {
@@ -47,35 +66,63 @@ jobs:
             if (!dir) throw new Error(`no package named "${name}" under packages/`)
 
             const pkg = JSON.parse(fs.readFileSync(`packages/${dir}/package.json`, "utf8"))
-            if (pkg.version !== version) {
+            if (pkg.private) throw new Error(`packages/${dir} is private`)
+            if (dry) {
+              version = pkg.version
+            } else if (pkg.version !== version) {
               throw new Error(`tag says ${version}, packages/${dir}/package.json says ${pkg.version}`)
             }
-            if (pkg.private) throw new Error(`packages/${dir} is private`)
 
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, `dir=packages/${dir}\nname=${name}\nversion=${version}\n`)
-            console.log(`publishing ${name}@${version} from packages/${dir}`)
+            fs.appendFileSync(
+              process.env.GITHUB_OUTPUT,
+              `dir=packages/${dir}\nname=${name}\nversion=${version}\ndry=${dry}\n`,
+            )
+            console.log(`${dry ? "rehearsing" : "publishing"} ${name}@${version} from packages/${dir}`)
           '
 
       - uses: pnpm/action-setup@v4
         with:
           version: 10.15.0
 
-      # tsdown requires Node ^22.18.0 || >=24.11.0, so the release build cannot
-      # run on the Node 20 that CI's check job still covers.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      # A version can never be reused on npm, so a duplicate is worth catching
-      # before the gates burn five minutes to fail on a 403.
       - name: Refuse to republish
+        if: steps.pkg.outputs.dry != 'true'
         run: |
           if npm view "${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }}" version >/dev/null 2>&1; then
             echo "::error::${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }} is already on npm"
             exit 1
           fi
+
+      - name: Check the token authenticates
+        if: steps.pkg.outputs.dry == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "::error::NPM_TOKEN is not set on this repository"
+            exit 1
+          fi
+          echo "authenticated as $(npm whoami)"
+
+      - name: Probe write access
+        if: steps.pkg.outputs.dry == 'true' && inputs.probe_write
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          SPEC: ${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }}
+        run: |
+          npm dist-tag add "$SPEC" ci-write-probe
+          echo "write access confirmed for ${SPEC}"
+
+      - name: Remove the probe dist-tag
+        if: always() && steps.pkg.outputs.dry == 'true' && inputs.probe_write
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm dist-tag rm "${{ steps.pkg.outputs.name }}" ci-write-probe || true
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r lint
@@ -83,14 +130,27 @@ jobs:
       - run: pnpm -r build
       - run: pnpm --filter rustify-ts size
 
-      # Built fresh above, so the tarball can't carry a stale dist.
       - name: Publish
+        if: steps.pkg.outputs.dry != 'true'
         working-directory: ${{ steps.pkg.outputs.dir }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
 
+      - name: Rehearse the publish
+        if: steps.pkg.outputs.dry == 'true'
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL}" ]; then
+            echo "::error::no OIDC token available, --provenance would fail on a real release"
+            exit 1
+          fi
+          npm publish --dry-run
+
       - name: GitHub Release
+        if: steps.pkg.outputs.dry != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --generate-notes --verify-tag
