@@ -17,5 +17,3 @@ Benchmarks (manual, not a PR gate):
 
     pnpm --filter rustify-ts bench:compare   # micro + macro vs native try/catch and neverthrow
     pnpm --filter rustify-ts bench:all       # invariants I1/I4, type-check budget, and the above
-
-Design docs and implementation plans live in `docs/superpowers/`.
