@@ -44,6 +44,7 @@ fromPromise(p, classify)         // ❌ floating Promise<Outcome>, with or witho
 
 ```ts
 const r = syncDevice(body)       // ✅ assigned
+r = syncDevice(body)             // ✅ assigned (reassignment counts too)
 return syncDevice(body)          // ✅ returned
 handle(syncDevice(body))         // ✅ passed as an argument
 syncDevice(body).match(ok, onErr) // ✅ the statement is the .match call — its type is R, not Outcome
@@ -60,6 +61,7 @@ notAnOutcome()                   // ✅ not an Outcome-typed expression
 ```js
 rustify.configs.recommended,
 {
+  files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
   rules: {
     'rustify/no-floating-outcome': ['error', { ignoreVoid: false }],
   },
@@ -68,7 +70,7 @@ rustify.configs.recommended,
 
 ## What this doesn't do
 
-- No autofix — only a suggestion that prepends `void `. Handling an `Outcome`
+- No autofix — only a suggestion that wraps the expression in `void (...)`. Handling an `Outcome`
   is a design decision an automated fix shouldn't make for you.
 - Only user-defined `Outcome` from `rustify-ts` is recognized; a locally
   defined type that happens to also be named `Outcome` is ignored.
